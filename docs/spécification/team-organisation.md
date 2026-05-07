@@ -13,4 +13,4 @@ Chacun doit avoir un rôle principal identifiable pour le livrable final.
 *   **[Nom 1] (Lead Tech / Architecture)** : Setup CI/CD, Docker, validation des PRs, intégration globale.
 *   **[Nom 2] (Lead Data / Backend)** : Modélisation SQL/NoSQL (MCD/MLD), création des scripts de seed, logique métier API.
 *   **[Nom 3] (Lead Frontend / UI)** : Intégration React, responsive design, appels API.
-*   **[Nom 4] (Lead Produit / QA)** : Rédaction du dossier (Sections 5 à 11)[cite: 1], création des wireframes/maquettes, tests de l'API (Postman).
+*   **[Nom 4] (Lead Produit / QA)** : Rédaction du dossier (Sections 5 à 11), création des wireframes/maquettes, tests de l'API (Postman).
