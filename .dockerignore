@@ -65,8 +65,14 @@ docs/.doctrees/
 .git/
 .gitignore
 
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
 # Environment files
 .env
+.env.example
 .env.local
 .env.*.local
 
