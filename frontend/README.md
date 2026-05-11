@@ -1,1 +1,1 @@
-# Eventry - Front End Folder
+# Eventry - Front End Folder : Vite + React

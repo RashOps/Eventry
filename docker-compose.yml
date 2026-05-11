@@ -1,0 +1,63 @@
+services:
+  # Base Relationnelle (SQL)
+  db-sql:
+    image: postgresql:15-alpine
+    container_name: eventry-sql
+    restart: always
+    environment:
+      POSTGRES_USER: ${SQL_USER}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD}
+      POSTGRES_DB: ${SQL_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sql_data:/var/lib/postgresql/data
+      - ./db/sql:/docker-entrypoint-initdb.d/
+    
+  # Base NoSQL (Documentaire)
+  db-nosql:
+    image: mongo:6.0
+    container_name: eventry-nosql
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${NOSQL_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - nosql_data:/data/db
+      - ./db/nosql:/docker-entrypoint-initdb.d/
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: eventry-api
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db-sql:
+        condition: service_healthy
+      db-nosql:
+        condition: service_started
+
+  # Frontend React
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: eventry-client
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+# Volumes pour la persistence des données
+volumes:
+  sql_data:
+  nosql_data:

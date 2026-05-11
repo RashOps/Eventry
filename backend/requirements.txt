@@ -1,0 +1,22 @@
+# --- Core API ---
+fastapi[all]==0.110.0 # Framework web asynchrone 
+uvicorn[standard]==0.27.1 # Serveur ASGI pour le déploiement 
+
+# --- Base de données SQL (PostgreSQL) ---
+sqlalchemy==2.0.27 # ORM standard pour la gestion des schémas SQL 
+psycopg2-binary==2.9.9 # Adaptateur PostgreSQL pour Python
+sqlmodel==0.0.16 # Surcouche SQLAlchemy + Pydantic pour un code plus propre 
+
+# --- Base de données NoSQL (MongoDB) ---
+pymongo==4.6.2 # Lib python pour mongoDB
+motor==3.3.2 # Pilote Python asynchrone pour MongoDB 
+beanie==1.25.0 # ODM asynchrone basé sur Pydantic (idéal pour la validation) 
+
+# --- Sécurité & Authentification ---
+python-jose[cryptography]==3.3.0 # Gestion des JWT (JSON Web Tokens)
+passlib[bcrypt]==1.7.4 # Hachage sécurisé des mots de passe
+python-multipart==0.0.9 # Pour gérer les formulaires de login
+
+# --- Utilitaires ---
+python-dotenv==1.0.1 # Chargement des variables d'environnement depuis le .env
+pydantic-settings==2.2.1 # Gestion avancée de la configuration via Pydantic
