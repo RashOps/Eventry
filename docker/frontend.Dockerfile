@@ -4,11 +4,11 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Optimisation du cache pour les dépendances
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci --quiet
 
 # Copie du code et build de l'application
-COPY . .
+COPY ./frontend .
 RUN npm run build
 
 # --- STAGE 2: Runtime Stage (L'image finale) ---

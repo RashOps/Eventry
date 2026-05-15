@@ -1,7 +1,7 @@
 services:
   # Base Relationnelle (SQL)
   db-sql:
-    image: postgresql:15-alpine
+    image: postgres:15-alpine
     container_name: eventry-sql
     restart: always
     environment:
@@ -13,7 +13,12 @@ services:
     volumes:
       - sql_data:/var/lib/postgresql/data
       - ./db/sql:/docker-entrypoint-initdb.d/
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER} -d ${SQL_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Base NoSQL (Documentaire)
   db-nosql:
     image: mongo:6.0
@@ -27,6 +32,11 @@ services:
     volumes:
       - nosql_data:/data/db
       - ./db/nosql:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Backend FastAPI
   backend:
@@ -44,7 +54,7 @@ services:
       db-sql:
         condition: service_healthy
       db-nosql:
-        condition: service_started
+        condition: service_healthy
 
   # Frontend React
   frontend:
@@ -53,7 +63,7 @@ services:
       dockerfile: docker/frontend.Dockerfile
     container_name: eventry-client
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       - backend
 
