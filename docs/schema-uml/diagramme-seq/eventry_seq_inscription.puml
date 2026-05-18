@@ -1,0 +1,56 @@
+@startuml Sequence_Inscription
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam sequenceParticipant underline
+skinparam sequence {
+  ActorBorderColor #0F6E56
+  ActorBackgroundColor #E1F5EE
+  ParticipantBorderColor #534AB7
+  ParticipantBackgroundColor #EEEDFE
+  LifeLineBorderColor #534AB7
+  ArrowColor #3d3d3a
+  DividerBackgroundColor #F1EFE8
+  GroupBackgroundColor #FAC77520
+  GroupBorderColor #BA7517
+}
+
+title Séquence — Inscription à un événement
+
+actor       Participant  as P
+participant "UI Web"     as UI
+participant "API Backend" as API
+database    "PostgreSQL"  as PG
+
+== Consultation de la fiche ==
+
+P  -> UI  : Consulter fiche événement
+UI -> API : GET /events/:id
+API -> PG : SELECT événement, places disponibles
+PG --> API : données événement
+API --> UI : 200 OK — fiche événement
+UI --> P  : Afficher fiche + bouton S'inscrire
+
+== Demande d'inscription ==
+
+P  -> UI  : Cliquer «S'inscrire»
+UI -> API : POST /inscriptions\n{Authorization: Bearer <JWT>, id_evenement}
+
+API -> API : Vérifier JWT + rôle participant
+
+alt Places disponibles
+
+    API -> PG : INSERT inscriptions\n(statut='confirmee', places_reservees=1)
+    PG --> API : id_inscription généré
+
+else Liste d'attente (capacité atteinte)
+
+    API -> PG : INSERT inscriptions\n(statut='liste_attente')
+    PG --> API : id_inscription généré
+    note right of API : Promotion automatique\nsi une place se libère
+
+end
+
+API --> UI : 201 Created\n{id_inscription, statut, date}
+UI --> P  : Confirmation + ajout à l'agenda
+
+@enduml

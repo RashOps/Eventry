@@ -1,0 +1,66 @@
+@startuml Sequence_Creation_Evenement
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam sequence {
+  ActorBorderColor #3C3489
+  ActorBackgroundColor #EEEDFE
+  ParticipantBorderColor #534AB7
+  ParticipantBackgroundColor #EEEDFE
+  LifeLineBorderColor #534AB7
+  ArrowColor #3d3d3a
+  GroupBackgroundColor #FAC77520
+  GroupBorderColor #BA7517
+  DatabaseBorderColor #993C1D
+  DatabaseBackgroundColor #FAECE7
+}
+
+title Séquence — Création d'un événement (Organisateur)
+
+actor       Organisateur  as O
+participant "UI Web"      as UI
+participant "API Backend" as API
+database    "PostgreSQL"  as PG
+database    "MongoDB"     as MG
+
+== Saisie du formulaire ==
+
+O  -> UI  : Remplir formulaire création\n(titre, dates, lieu, catégorie, tags, prix,\ncapacité, métadonnées spécifiques)
+UI -> API : POST /events\n{Authorization: Bearer <JWT>, payload complet}
+
+== Contrôles d'accès et validation ==
+
+API -> API : Vérifier JWT\n+ rôle = 'organisateur'
+API -> API : Valider données métier\n(dates cohérentes, capacité > 0, lieu existant…)
+
+alt Données valides
+
+    API -> PG : INSERT INTO evenements\n(titre, description, date_debut, date_fin,\nprix, capacite_max, statut='draft',\nid_lieu, id_organisateur, id_categorie)
+    PG --> API : id_evenement généré
+
+    loop Pour chaque tag
+        API -> PG : INSERT INTO evenements_tags\n(id_evenement, id_tag)
+    end
+
+    API -> MG : db.metadonnees.insertOne({\n  id_evenement,\n  type: "festival" | "exposition" | …,\n  attributsSpecifiques: {...},\n  location: { type: "Point",\n    coordinates: [lng, lat] }\n})
+    MG --> API : ObjectId métadonnées
+
+    API --> UI : 201 Created\n{id_evenement, statut: "draft"}
+    UI --> O   : Redirection vers le dashboard\néditeur avec aperçu de l'événement
+
+    opt L'organisateur publie immédiatement
+        O  -> UI  : Cliquer «Publier»
+        UI -> API : PATCH /events/:id\n{statut: "published"}
+        API -> PG : UPDATE evenements SET statut='published'
+        PG --> API : OK
+        API --> UI : 200 OK
+        UI --> O   : Événement visible dans le catalogue
+    end
+
+else Données invalides
+
+    API --> UI : 422 Unprocessable Entity\n{errors: [{field, message}]}
+    UI --> O   : Afficher erreurs sur le formulaire
+
+end
+
+@enduml
