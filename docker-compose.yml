@@ -12,7 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - sql_data:/var/lib/postgresql/data
-      - ./db/sql:/docker-entrypoint-initdb.d/
+      - ./db/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${SQL_USER} -d ${SQL_DATABASE}"]
       interval: 5s
@@ -31,7 +31,7 @@ services:
       - "27017:27017"
     volumes:
       - nosql_data:/data/db
-      - ./db/nosql:/docker-entrypoint-initdb.d/
+      - ./db/nosql/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s

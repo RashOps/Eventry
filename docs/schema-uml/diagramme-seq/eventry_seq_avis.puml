@@ -1,0 +1,53 @@
+@startuml Sequence_Depot_Avis
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam sequence {
+  ActorBorderColor #0F6E56
+  ActorBackgroundColor #E1F5EE
+  ParticipantBorderColor #534AB7
+  ParticipantBackgroundColor #EEEDFE
+  LifeLineBorderColor #534AB7
+  ArrowColor #3d3d3a
+  GroupBackgroundColor #FAC77520
+  GroupBorderColor #BA7517
+  DatabaseBorderColor #993C1D
+  DatabaseBackgroundColor #FAECE7
+}
+
+title Séquence — Dépôt d'un avis
+
+actor       Participant   as P
+participant "UI Web"      as UI
+participant "API Backend" as API
+database    "PostgreSQL"  as PG
+database    "MongoDB"     as MG
+
+== Soumission de l'avis ==
+
+P  -> UI  : Rédiger avis + notes détaillées\n(ambiance, organisation, global)
+UI -> API : POST /events/:id/avis\n{Authorization: Bearer <JWT>, payload}
+
+== Vérification métier ==
+
+API -> PG : SELECT inscription\nWHERE id_utilisateur=? AND id_evenement=?\nAND statut='confirmee'
+PG --> API : résultat requête
+
+alt Inscription confirmée trouvée
+
+    API -> MG  : db.avis.insertOne({\n  id_evenement, id_utilisateur,\n  noteGlobale, noteAmbiance,\n  noteOrganisation, commentaire,\n  datePublication\n})
+    MG --> API : ObjectId avis inséré
+
+    API -> PG  : UPDATE evenements\nSET note_moyenne = (\n  SELECT AVG(note_globale)\n  FROM avis WHERE id_evenement=?\n)
+    PG --> API : OK — stats mises à jour
+
+    API --> UI : 201 Created\n{id_avis, datePublication}
+    UI --> P   : Avis affiché dans la fiche événement
+
+else Participant non inscrit (ou inscription annulée)
+
+    API --> UI : 403 Forbidden\n{"error": "inscription_requise"}
+    UI --> P   : Message d'erreur — inscription nécessaire
+
+end
+
+@enduml

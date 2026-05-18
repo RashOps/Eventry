@@ -1,0 +1,188 @@
+@startuml Diagramme_de_classes_Eventry
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor White
+  BorderColor #534AB7
+  ArrowColor #534AB7
+  HeaderBackgroundColor #EEEDFE
+}
+skinparam stereotypePosition top
+
+title Diagramme de classes — Eventry
+
+' ── Hiérarchie utilisateurs ──────────────────────────────────────────────────
+
+class Utilisateur {
+  + id : int <<PK>>
+  + email : String <<UNIQUE>>
+  + motDePasseHash : String
+  + pseudonyme : String <<UNIQUE>>
+  + avatarUrl : String
+  + role : RoleEnum
+  + dateInscription : DateTime
+  + estActif : Boolean
+  --
+  + seConnecter() : void
+  + sInscrire() : void
+  + modifierProfil() : void
+  + demanderElevationRole() : void
+}
+
+class Participant {
+  --
+  + sInscrireEvenement(e : Evenement) : Inscription
+  + annulerInscription(i : Inscription) : void
+  + deposerAvis(e : Evenement, note : Note) : Avis
+  + consulterAgenda() : Evenement[]
+  + likerAvis(a : Avis) : void
+}
+
+class Organisateur {
+  + nomOrganisation : String
+  + description : String
+  + siteWeb : String
+  + estVerifie : Boolean
+  + dateCreation : DateTime
+  --
+  + creerEvenement(data : Object) : Evenement
+  + modifierEvenement(e : Evenement) : void
+  + annulerEvenement(e : Evenement) : void
+  + consulterStatistiques(e : Evenement) : Stats
+  + repondreAvis(a : Avis, texte : String) : void
+}
+
+Utilisateur <|-- Participant : hérite
+Utilisateur <|-- Organisateur : hérite
+
+' ── Événement et entités liées ───────────────────────────────────────────────
+
+class Evenement {
+  + id : int <<PK>>
+  + titre : String
+  + description : String
+  + dateDebut : DateTime
+  + dateFin : DateTime
+  + prix : Decimal
+  + capaciteMax : int
+  + imageUrl : String
+  + statut : StatutEnum
+  + dateCreation : DateTime
+  --
+  + placesDisponibles() : int
+  + estComplet() : Boolean
+  + publier() : void
+  + archiver() : void
+}
+
+class Lieu {
+  + id : int <<PK>>
+  + nom : String
+  + adresse : String
+  + ville : String
+  + codePostal : String
+  + pays : String
+  + latitude : Decimal
+  + longitude : Decimal
+  + capacite : int
+  --
+  + distanceDe(lat : Decimal, lon : Decimal) : float
+}
+
+class Categorie {
+  + id : int <<PK>>
+  + nom : String
+  + description : String
+}
+
+class Tag {
+  + id : int <<PK>>
+  + libelle : String <<UNIQUE>>
+}
+
+' ── Transactionnel ───────────────────────────────────────────────────────────
+
+class Inscription {
+  + id : int <<PK>>
+  + statut : StatutInscription
+  + placesReservees : int
+  + dateInscription : DateTime
+  --
+  + confirmer() : void
+  + annuler() : void
+  + promouvoir() : void
+}
+
+' ── Social ───────────────────────────────────────────────────────────────────
+
+class Avis {
+  + id : int <<PK>>
+  + noteGlobale : int
+  + noteAmbiance : int
+  + noteOrganisation : int
+  + commentaire : String
+  + datePublication : DateTime
+  + nbLikes : int
+  + estVisible : Boolean
+  --
+  + moderer() : void
+}
+
+class ReponseOrganisateur {
+  + id : int <<PK>>
+  + texte : String
+  + dateReponse : DateTime
+}
+
+' ── MongoDB ──────────────────────────────────────────────────────────────────
+
+class MetadonneesEvenement <<MongoDB>> {
+  + idEvenement : int
+  + type : String
+  + attributsSpecifiques : Object
+  + coordonneesGeo : GeoPoint
+  --
+  + indexerRecherche() : void
+}
+
+' ── Relations ────────────────────────────────────────────────────────────────
+
+Organisateur "1" --> "0..*" Evenement      : crée
+Evenement    "0..*" --> "1" Lieu           : se déroule à
+Evenement    "0..*" --> "1" Categorie      : appartient à
+Evenement    "0..*" <--> "0..*" Tag        : est tagué
+
+Participant  "1" --> "0..*" Inscription    : effectue
+Evenement    "1" --> "0..*" Inscription    : reçoit
+
+Participant  "1" --> "0..*" Avis           : dépose
+Evenement    "1" --> "0..*" Avis           : possède
+Avis         "1" --> "0..1" ReponseOrganisateur : a
+
+Evenement    "1" --> "1"   MetadonneesEvenement : enrichi par
+
+' ── Énumérations ─────────────────────────────────────────────────────────────
+
+enum RoleEnum {
+  visiteur
+  participant
+  organisateur
+}
+
+enum StatutEnum {
+  draft
+  published
+  cancelled
+  archived
+}
+
+enum StatutInscription {
+  confirmee
+  liste_attente
+  annulee
+}
+
+Utilisateur  ..  RoleEnum
+Evenement    ..  StatutEnum
+Inscription  ..  StatutInscription
+
+@enduml

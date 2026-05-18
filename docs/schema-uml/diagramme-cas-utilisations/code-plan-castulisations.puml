@@ -1,0 +1,70 @@
+@startuml Cas_d_utilisation_Eventry
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor White
+  BorderColor #534AB7
+  ArrowColor #534AB7
+}
+skinparam actor {
+  BackgroundColor #E1F5EE
+  BorderColor #0F6E56
+}
+
+title Diagramme de cas d'utilisation — Eventry
+
+rectangle "Système Eventry" {
+
+  package "Accès public" #EEEDFE {
+    usecase "Rechercher des événements" as UC1
+    usecase "Consulter la fiche événement" as UC2
+    usecase "Lire les avis" as UC3
+  }
+
+  package "Espace Participant" #E1F5EE {
+    usecase "S'inscrire / se connecter" as UC4
+    usecase "S'inscrire à un événement" as UC5
+    usecase "Rejoindre liste d'attente" as UC6
+    usecase "Annuler une inscription" as UC7
+    usecase "Déposer un avis / note" as UC8
+    usecase "Gérer son agenda" as UC9
+  }
+
+  package "Espace Organisateur" #F5C4B3 {
+    usecase "Créer un événement" as UC10
+    usecase "Modifier / annuler événement" as UC11
+    usecase "Consulter les statistiques" as UC12
+    usecase "Répondre aux avis" as UC13
+  }
+}
+
+actor Visiteur as V
+actor Participant as P
+actor Organisateur as O
+
+' Visiteur
+V --> UC1
+V --> UC2
+V --> UC3
+
+' Participant hérite du Visiteur
+P --|> V
+
+P --> UC4
+P --> UC5
+P --> UC7
+P --> UC8
+P --> UC9
+
+' Organisateur hérite du Participant
+O --|> P
+
+O --> UC10
+O --> UC11
+O --> UC12
+O --> UC13
+
+' Relations include / extend
+UC5 ..> UC6 : <<include>>
+
+@enduml
