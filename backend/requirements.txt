@@ -20,3 +20,4 @@ python-multipart==0.0.9 # Pour gérer les formulaires de login
 # --- Utilitaires ---
 python-dotenv==1.0.1 # Chargement des variables d'environnement depuis le .env
 pydantic-settings==2.2.1 # Gestion avancée de la configuration via Pydantic
+pyjwt==2.13.0 # JSON Web Token pour gerer les sessions de connexion
