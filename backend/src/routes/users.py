@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlmodel import select
 from typing import List
 
 from src.utils.postegre_connexion import get_async_sqldb
 from src.utils.security_jwt import get_current_user
+from src.models.users import Utilisateur
 from src.schemas.users import UserOut, UserUpdate
 
 router = APIRouter(
@@ -14,82 +15,66 @@ router = APIRouter(
 
 @router.get("/{user_id}", response_model=UserOut)
 async def retrieve_user_infos(user_id: int, session: AsyncSession = Depends(get_async_sqldb)):
-    """Récupère les informations publiques d'un utilisateur"""
-    query = text("SELECT id, email, pseudo, role, avatar_url, date_inscription, est_actif FROM utilisateurs WHERE id = :id")
-    result = await session.execute(query, {"id": user_id})
-    user = result.fetchone()
+    """Récupère les informations publiques d'un utilisateur (via SQLModel)"""
+    user = await session.get(Utilisateur, user_id)
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    return UserOut(
-        id=user.id,
-        email=user.email,
-        pseudo=user.pseudo,
-        role=user.role,
-        avatar_url=user.avatar_url,
-        date_inscription=user.date_inscription,
-        est_actif=user.est_actif
-    )
+    return user
 
 @router.patch("/{user_id}", response_model=UserOut)
 async def modify_user_infos(
     user_id: int, 
     update_data: UserUpdate,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Permet à un utilisateur de modifier son propre profil"""
+    """Permet à un utilisateur de modifier son propre profil (via SQLModel)"""
     if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to modify this profile"
         )
     
-    # Construction dynamique de la requête de mise à jour
-    updates = []
-    params = {"id": user_id}
-    
-    if update_data.pseudo is not None:
-        updates.append("pseudo = :pseudo")
-        params["pseudo"] = update_data.pseudo
-    if update_data.avatar_url is not None:
-        updates.append("avatar_url = :avatar_url")
-        params["avatar_url"] = str(update_data.avatar_url)
-        
-    if not updates:
-        return current_user
+    # Récupération de l'utilisateur à mettre à jour
+    db_user = await session.get(Utilisateur, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    query_str = f"UPDATE utilisateurs SET {', '.join(updates)} WHERE id = :id RETURNING id, email, pseudo, role, avatar_url, date_inscription, est_actif"
+    # Mise à jour sélective
+    user_data = update_data.model_dump(exclude_unset=True)
+    for key, value in user_data.items():
+        if key == "avatar_url" and value:
+            setattr(db_user, key, str(value))
+        else:
+            setattr(db_user, key, value)
     
     try:
-        result = await session.execute(text(query_str), params)
-        updated_user = result.fetchone()
-        return UserOut(
-            id=updated_user.id,
-            email=updated_user.email,
-            pseudo=updated_user.pseudo,
-            role=updated_user.role,
-            avatar_url=updated_user.avatar_url,
-            date_inscription=updated_user.date_inscription,
-            est_actif=updated_user.est_actif
-        )
+        session.add(db_user)
+        await session.commit()
+        await session.refresh(db_user)
+        return db_user
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Update failed: {str(e)}")
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_profil(
     user_id: int, 
-    current_user: UserOut = Depends(get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Permet à un utilisateur de supprimer son compte"""
+    """Permet à un utilisateur de supprimer son compte (via SQLModel)"""
     if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to delete this profile"
         )
         
-    query = text("DELETE FROM utilisateurs WHERE id = :id")
-    await session.execute(query, {"id": user_id})
+    db_user = await session.get(Utilisateur, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    await session.delete(db_user)
+    await session.commit()
     return None
