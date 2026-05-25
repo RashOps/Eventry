@@ -1,11 +1,10 @@
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 import datetime
-from passlib.context import CryptContext
 from typing import Optional
 
 from config import settings
@@ -17,14 +16,25 @@ SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hache un mot de passe en utilisant bcrypt directement"""
+    # bcrypt attend des bytes
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Vérifie un mot de passe contre son hash bcrypt"""
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'), 
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
@@ -33,10 +43,13 @@ def create_access_token(data: dict) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+from sqlmodel import select
+from src.models.users import Utilisateur
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     session: AsyncSession = Depends(get_async_sqldb)
-) -> UserOut:
+) -> Utilisateur:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -51,20 +64,11 @@ async def get_current_user(
     except InvalidTokenError:
         raise credentials_exception
 
-    query = text("SELECT id, email, pseudo, role, avatar_url, date_inscription, est_actif FROM utilisateurs WHERE email = :email")
-    result = await session.execute(query, {"email": token_data.email})
-    user = result.fetchone()
+    statement = select(Utilisateur).where(Utilisateur.email == token_data.email)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
 
     if user is None:
         raise credentials_exception
 
-    # Convert Row to dict for Pydantic
-    return UserOut(
-        id=user.id,
-        email=user.email,
-        pseudo=user.pseudo,
-        role=user.role,
-        avatar_url=user.avatar_url,
-        date_inscription=user.date_inscription,
-        est_actif=user.est_actif
-    )
+    return user
