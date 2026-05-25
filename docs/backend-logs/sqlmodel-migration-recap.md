@@ -28,6 +28,7 @@ Transition complète de l'architecture backend vers **SQLModel** afin de supprim
 ### 3. Résolution de Problèmes Critiques (Bug Fix)
 *   **Ordre de Définition** : Correction d'une erreur `NoInspectionAvailable` en réordonnant la table de liaison `EvenementTag` avant son utilisation dans la relation `Relationship` du modèle `Tag`.
 *   **Synchronisation Polyglotte** : Mise à jour de la logique de création d'événements pour lier l'ID généré par SQLModel (Postgres) au document MongoDB de manière atomique.
+*   **Cas-Sensitivity Enums** : Alignement des membres des Enums Python sur les valeurs minuscules de PostgreSQL (`RoleEnum.participant` au lieu de `RoleEnum.PARTICIPANT`). Cette correction a résolu les erreurs de `LookupError` et de validation lors du fetch des données.
 
 ---
 

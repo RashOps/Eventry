@@ -25,7 +25,7 @@ En haut à droite de la page Swagger, cliquez sur le bouton vert **Authorize** a
 ### 2. Remplir le formulaire
 Une fenêtre surgissante apparaît avec le titre "Available authorizations".
 *   **username** : Saisissez l'**email** de votre compte (ex: `admin@eventry.fr`).
-*   **password** : Saisissez votre mot de passe (ex: `hash_admin` dans le seed actuel).
+*   **password** : Saisissez le mot de passe de test : **`password123`**.
 *   **Note** : Laissez les champs `client_id` et `client_secret` vides (ils ne sont pas requis pour notre configuration).
 
 ### 3. Valider

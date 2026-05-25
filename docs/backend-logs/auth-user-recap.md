@@ -28,7 +28,7 @@ Mise en place d'un système d'authentification robuste et sécurisé pour le bac
 
 ### 3. Routes d'Authentification (`auth.py`)
 *   **POST `/register`** : Inscription avec vérification d'unicité (email/pseudo) et hachage.
-*   **POST `/login`** : Vérification des identifiants et génération du JWT.
+*   **POST `/login`** : Vérification des identifiants et génération du JWT. **Fix 422** : Passage à `OAuth2PasswordRequestForm` pour assurer la compatibilité avec le bouton "Authorize" de Swagger UI.
 *   **POST `/logout`** : Endpoint de déconnexion (conforme à la doc, stateless).
 *   **GET `/me`** : Récupération du profil de l'utilisateur connecté.
 
@@ -37,6 +37,10 @@ Mise en place d'un système d'authentification robuste et sécurisé pour le bac
 *   **PATCH `/{id}`** : Modification sécurisée (uniquement par le propriétaire).
 *   **DELETE `/{id}`** : Suppression de compte sécurisée.
 *   **Sécurisation SQL** : Remplacement des f-strings par des requêtes paramétrées avec `sqlalchemy.text` pour bloquer les injections SQL.
+
+### 5. Correctifs de Dernière Minute (Stabilité)
+*   **Bcrypt Seed Data** : Remplacement des mots de passe en clair dans `init.sql` par des hash bcrypt valides pour éviter les erreurs `UnknownHashError` lors du login.
+*   **Mot de passe universel** : Tous les comptes de test utilisent désormais le mot de passe `password123`.
 
 ---
 
