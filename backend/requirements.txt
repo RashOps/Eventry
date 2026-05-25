@@ -6,6 +6,7 @@ uvicorn[standard]==0.27.1 # Serveur ASGI pour le déploiement
 sqlalchemy==2.0.27 # ORM standard pour la gestion des schémas SQL 
 psycopg2-binary==2.9.9 # Adaptateur PostgreSQL pour Python
 sqlmodel==0.0.16 # Surcouche SQLAlchemy + Pydantic pour un code plus propre 
+asyncpg==0.29.0  # Driver async le plus performant pour PostgreSQL en Python
 
 # --- Base de données NoSQL (MongoDB) ---
 pymongo==4.6.2 # Lib python pour mongoDB
@@ -20,3 +21,9 @@ python-multipart==0.0.9 # Pour gérer les formulaires de login
 # --- Utilitaires ---
 python-dotenv==1.0.1 # Chargement des variables d'environnement depuis le .env
 pydantic-settings==2.2.1 # Gestion avancée de la configuration via Pydantic
+pyjwt==2.13.0 # JSON Web Token pour gerer les sessions de connexion
+
+# --- Tests ---
+pytest==9.0.3 # Framework de test
+pytest-asyncio==1.3.0 # Support async pour pytest
+httpx==0.28.1 # Client HTTP pour tester les API

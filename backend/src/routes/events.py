@@ -1,0 +1,347 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from sqlmodel import select, or_, and_
+from typing import List, Optional
+from datetime import datetime
+
+from src.utils.postegre_connexion import get_async_sqldb
+from src.utils.mongo_connexion import get_db_nosql
+from src.utils.security_jwt import get_current_user
+from src.models import Utilisateur, Evenement, Lieu, Categorie, Tag, EvenementTag, RoleEnum, Organisateur
+from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary
+
+router = APIRouter(
+    prefix="/events",
+    tags=["Events"],
+)
+
+from sqlalchemy.orm import selectinload
+
+@router.get("/", response_model=List[EventSummary])
+async def list_events(
+    category: Optional[str] = None,
+    city: Optional[str] = None,
+    price_max: Optional[float] = None,
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Liste les événements avec filtres (PostgreSQL)"""
+    statement = select(Evenement).options(
+        selectinload(Evenement.lieu),
+        selectinload(Evenement.tags)
+    ).join(Lieu).join(Categorie)
+    
+    if category:
+        statement = statement.where(Categorie.nom == category)
+    if city:
+        statement = statement.where(Lieu.ville == city)
+    if price_max is not None:
+        statement = statement.where(Evenement.prix <= price_max)
+        
+    result = await session.execute(statement)
+    events = result.scalars().all()
+    
+    return [
+        EventSummary(
+            id=e.id,
+            titre=e.titre,
+            date_debut=e.date_debut,
+            prix=e.prix,
+            capacite_max=e.capacite_max,
+            image_url=e.image_url,
+            statut=e.statut,
+            venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
+            tags=[t.libelle for t in e.tags]
+        ) for e in events
+    ]
+
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=EventDetail)
+async def create_event(
+    event_data: EventCreate,
+    current_user: Utilisateur = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Création d'un événement : Transaction SQL + Insertion MongoDB"""
+    
+    # 1. Vérification des droits (Organisateur)
+    if current_user.role != RoleEnum.organisateur:
+        raise HTTPException(status_code=403, detail="Only organizers can create events")
+    
+    # Récupération de l'ID organisateur
+    statement = select(Organisateur).where(Organisateur.id_utilisateur == current_user.id)
+    res_org = await session.execute(statement)
+    organisateur = res_org.scalar_one_or_none()
+    
+    if not organisateur:
+        raise HTTPException(status_code=400, detail="User is registered as organizer but profile is missing")
+
+    # 2. Insertion SQL
+    new_event = Evenement(
+        titre=event_data.titre,
+        description=event_data.description,
+        date_debut=event_data.date_debut,
+        date_fin=event_data.date_fin,
+        prix=event_data.prix,
+        capacite_max=event_data.capacite_max,
+        image_url=event_data.image_url,
+        id_lieu=event_data.id_lieu,
+        id_categorie=event_data.id_categorie,
+        id_organisateur=organisateur.id
+    )
+    
+    try:
+        session.add(new_event)
+        await session.flush() # Pour récupérer l'ID sans commit définitif
+        
+        # Gestion des tags (SQL)
+        for tag_name in event_data.tags:
+            # Récupérer ou créer le tag
+            stmt_tag = select(Tag).where(Tag.libelle == tag_name)
+            res_tag = await session.execute(stmt_tag)
+            tag = res_tag.scalar_one_or_none()
+            if not tag:
+                tag = Tag(libelle=tag_name)
+                session.add(tag)
+                await session.flush()
+            
+            # Liaison
+            link = EvenementTag(id_evenement=new_event.id, id_tag=tag.id)
+            session.add(link)
+
+        # 3. Insertion MongoDB
+        db_nosql = get_db_nosql()
+        mongo_doc = {
+            "event_id": new_event.id,
+            "type": (await session.get(Categorie, event_data.id_categorie)).nom,
+            "location": event_data.location.model_dump(),
+            "metadata": event_data.metadata,
+            "search_text": f"{new_event.titre} {new_event.description}",
+            "view_count": 0,
+            "created_at": datetime.now()
+        }
+        
+        db_nosql.events_catalog.insert_one(mongo_doc)
+        
+        # 4. Validation finale
+        await session.commit()
+        await session.refresh(new_event)
+        
+        return await get_event_by_id(new_event.id, session)
+
+    except Exception as e:
+        await session.rollback()
+        # En cas d'échec Mongo après SQL, on a rollback SQL.
+        # En cas d'échec SQL avant Mongo, pas d'impact.
+        raise HTTPException(status_code=500, detail=f"Failed to create event: {str(e)}")
+
+@router.get("/nearby", response_model=List[EventSummary])
+async def search_nearby(
+    lat: float,
+    lng: float,
+    radius: int = 10000, # mètres
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Recherche géospatiale via MongoDB"""
+    db_nosql = get_db_nosql()
+    
+    # 1. MongoDB : Trouver les IDs dans le périmètre
+    cursor = db_nosql.events_catalog.find({
+        "location": {
+            "$near": {
+                "$geometry": {"type": "Point", "coordinates": [lng, lat]},
+                "$maxDistance": radius
+            }
+        }
+    })
+    
+    event_ids = [doc["event_id"] for doc in cursor]
+    
+    if not event_ids:
+        return []
+        
+    # 2. SQL : Récupérer les détails structurels
+    stmt = select(Evenement).options(
+        selectinload(Evenement.lieu),
+        selectinload(Evenement.tags)
+    ).where(Evenement.id.in_(event_ids))
+    
+    result = await session.execute(stmt)
+    events = result.scalars().all()
+    
+    # Tri par distance (préservé par MongoDB)
+    id_map = {e.id: e for e in events}
+    sorted_events = [id_map[eid] for eid in event_ids if eid in id_map]
+    
+    return [
+        EventSummary(
+            id=e.id,
+            titre=e.titre,
+            date_debut=e.date_debut,
+            prix=e.prix,
+            capacite_max=e.capacite_max,
+            image_url=e.image_url,
+            statut=e.statut,
+            venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
+            tags=[t.libelle for t in e.tags]
+        ) for e in sorted_events
+    ]
+
+@router.get("/search", response_model=List[EventSummary])
+async def search_events(
+    q: str = Query(..., min_length=3),
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Recherche plein-texte via MongoDB"""
+    db_nosql = get_db_nosql()
+    
+    # 1. MongoDB : Recherche textuelle
+    cursor = db_nosql.events_catalog.find(
+        {"$text": {"$search": q}},
+        {"score": {"$meta": "textScore"}}
+    ).sort([("score", {"$meta": "textScore"})])
+    
+    event_ids = [doc["event_id"] for doc in cursor]
+    
+    if not event_ids:
+        return []
+        
+    # 2. SQL : Récupérer les détails
+    stmt = select(Evenement).options(
+        selectinload(Evenement.lieu),
+        selectinload(Evenement.tags)
+    ).where(Evenement.id.in_(event_ids))
+    
+    result = await session.execute(stmt)
+    events = result.scalars().all()
+    
+    # Préserver l'ordre de pertinence
+    id_map = {e.id: e for e in events}
+    return [
+        EventSummary(
+            id=id_map[eid].id,
+            titre=id_map[eid].titre,
+            date_debut=id_map[eid].date_debut,
+            prix=id_map[eid].prix,
+            capacite_max=id_map[eid].capacite_max,
+            image_url=id_map[eid].image_url,
+            statut=id_map[eid].statut,
+            venue=VenueSummary(id=id_map[eid].lieu.id, nom=id_map[eid].lieu.nom, ville=id_map[eid].lieu.ville, adresse=id_map[eid].lieu.adresse),
+            tags=[t.libelle for t in id_map[eid].tags]
+        ) for eid in event_ids if eid in id_map
+    ]
+
+@router.get("/{event_id}", response_model=EventDetail)
+async def get_event_by_id(event_id: int, session: AsyncSession = Depends(get_async_sqldb)):
+    """Récupère un événement en agrégeant SQL (structure) et MongoDB (métadonnées)"""
+    
+    # 1. SQL avec chargement immédiat des relations
+    stmt = select(Evenement).options(
+        selectinload(Evenement.lieu),
+        selectinload(Evenement.organisateur),
+        selectinload(Evenement.categorie),
+        selectinload(Evenement.tags)
+    ).where(Evenement.id == event_id)
+    
+    res = await session.execute(stmt)
+    event = res.scalar_one_or_none()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    # 2. MongoDB
+    db_nosql = get_db_nosql()
+    mongo_data = db_nosql.events_catalog.find_one({"event_id": event_id})
+    
+    return EventDetail(
+        id=event.id,
+        titre=event.titre,
+        description=event.description,
+        date_debut=event.date_debut,
+        date_fin=event.date_fin,
+        prix=event.prix,
+        capacite_max=event.capacite_max,
+        image_url=event.image_url,
+        statut=event.statut,
+        venue=VenueSummary(id=event.lieu.id, nom=event.lieu.nom, ville=event.lieu.ville, adresse=event.lieu.adresse),
+        organizer=OrganizerSummary(id=event.organisateur.id, nom=event.organisateur.nom, est_verifie=event.organisateur.est_verifie),
+        categorie_name=event.categorie.nom,
+        metadata=mongo_data.get("metadata", {}) if mongo_data else {},
+        location=mongo_data.get("location") if mongo_data else {"type": "Point", "coordinates": [0, 0]},
+        tags=[t.libelle for t in event.tags]
+    )
+
+@router.patch("/{event_id}", response_model=EventDetail)
+async def update_event(
+    event_id: int,
+    update_data: EventUpdate,
+    current_user: Utilisateur = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Mise à jour d'un événement (SQL + MongoDB)"""
+    
+    # 1. Vérification de l'existence et des droits
+    stmt = select(Evenement).where(Evenement.id == event_id)
+    res = await session.execute(stmt)
+    event = res.scalar_one_or_none()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    # Seul l'organisateur de cet event (ou un admin) peut modifier
+    statement = select(Organisateur).where(Organisateur.id_utilisateur == current_user.id)
+    res_org = await session.execute(statement)
+    organisateur = res_org.scalar_one_or_none()
+    
+    if not organisateur or event.id_organisateur != organisateur.id:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this event")
+
+    # 2. Mise à jour SQL
+    update_dict = update_data.model_dump(exclude_unset=True, exclude={"metadata"})
+    for key, value in update_dict.items():
+        setattr(event, key, value)
+    
+    # 3. Mise à jour MongoDB (si metadata présent)
+    if update_data.metadata is not None:
+        db_nosql = get_db_nosql()
+        db_nosql.events_catalog.update_one(
+            {"event_id": event_id},
+            {"$set": {"metadata": update_data.metadata}}
+        )
+
+    await session.commit()
+    await session.refresh(event)
+    return await get_event_by_id(event.id, session)
+
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_event(
+    event_id: int,
+    current_user: Utilisateur = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_sqldb)
+):
+    """Suppression/Annulation d'un événement (Cascade SQL + MongoDB)"""
+    
+    # 1. Vérification
+    stmt = select(Evenement).where(Evenement.id == event_id)
+    res = await session.execute(stmt)
+    event = res.scalar_one_or_none()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    statement = select(Organisateur).where(Organisateur.id_utilisateur == current_user.id)
+    res_org = await session.execute(statement)
+    organisateur = res_org.scalar_one_or_none()
+    
+    if not organisateur or event.id_organisateur != organisateur.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this event")
+
+    # 2. SQL : On marque comme annulé (ou suppression physique selon besoin)
+    # Ici on suit la procédure proc_annuler_evenement via SQL
+    await session.execute(text("CALL proc_annuler_evenement(:id)"), {"id": event_id})
+    
+    # 3. MongoDB : On peut supprimer ou marquer comme inactif
+    db_nosql = get_db_nosql()
+    db_nosql.events_catalog.delete_one({"event_id": event_id})
+
+    await session.commit()
+    return None
