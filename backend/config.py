@@ -55,6 +55,18 @@ class Settings(BaseSettings):
         alias="SQL_DATABASE"
     )
 
+    sql_port: int = Field(
+        default=5432,
+        description="POSTEGRESQL PORT DOCKER",
+        alias="SQL_PORT"
+    )
+
+    sql_host: str = Field(
+        default="localhost",
+        description="POSTEGRESQL HOST",
+        alias="SQL_HOST"
+    )
+
     # CORS ORIGIN
     cors_origins: List[str] = Field(
         default=["http://localhost:5173"],
