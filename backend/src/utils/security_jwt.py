@@ -1,9 +1,16 @@
-import datetime
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
+from jwt.exceptions import InvalidTokenError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+import datetime
 from passlib.context import CryptContext
+from typing import Optional
 
 from config import settings
+from src.utils.postegre_connexion import get_async_sqldb
+from src.schemas.users import TokenData, UserOut
 
 # Configuration
 SECRET_KEY = settings.jwt_secret_key
@@ -11,7 +18,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# Spécifie à FastAPI où récupérer le token pour la doc Swagger (/docs)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def hash_password(password: str) -> str:
@@ -26,3 +32,39 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_async_sqldb)
+) -> UserOut:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except InvalidTokenError:
+        raise credentials_exception
+
+    query = text("SELECT id, email, pseudo, role, avatar_url, date_inscription, est_actif FROM utilisateurs WHERE email = :email")
+    result = await session.execute(query, {"email": token_data.email})
+    user = result.fetchone()
+
+    if user is None:
+        raise credentials_exception
+
+    # Convert Row to dict for Pydantic
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        pseudo=user.pseudo,
+        role=user.role,
+        avatar_url=user.avatar_url,
+        date_inscription=user.date_inscription,
+        est_actif=user.est_actif
+    )
