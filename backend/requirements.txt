@@ -6,6 +6,7 @@ uvicorn[standard]==0.27.1 # Serveur ASGI pour le déploiement
 sqlalchemy==2.0.27 # ORM standard pour la gestion des schémas SQL 
 psycopg2-binary==2.9.9 # Adaptateur PostgreSQL pour Python
 sqlmodel==0.0.16 # Surcouche SQLAlchemy + Pydantic pour un code plus propre 
+asyncpg==0.29.0  # Driver async le plus performant pour PostgreSQL en Python
 
 # --- Base de données NoSQL (MongoDB) ---
 pymongo==4.6.2 # Lib python pour mongoDB
