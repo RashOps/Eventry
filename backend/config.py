@@ -73,4 +73,10 @@ class Settings(BaseSettings):
         description="Allowed CORS origins"
     )
 
+    # JSON WEB TOKEN
+    jwt_secret_key: str = Field(
+        description="JWT Secret Key",
+        alias="JWT_SECRET_KEY"
+    )
+
 settings = Settings()
