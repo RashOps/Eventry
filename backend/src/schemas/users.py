@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, HttpUrl, Field
+from pydantic import BaseModel, EmailStr, HttpUrl, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -34,8 +34,7 @@ class UserOut(UserBase):
     date_inscription: datetime
     est_actif: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
