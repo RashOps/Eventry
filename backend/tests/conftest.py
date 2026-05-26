@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 
 from src.main import app
 from src.utils.postegre_connexion import get_async_sqldb
+from src.utils.mongo_connexion import init_db_nosql
 from config import settings
 
 # --- Configuration de la DB de TEST ---
@@ -27,6 +28,9 @@ async def session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture(scope="function")
 async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Client HTTP asynchrone qui injecte la session de test"""
+    # Initialisation Beanie pour les tests
+    await init_db_nosql()
+    
     async def override_get_async_sqldb():
         yield session
 
