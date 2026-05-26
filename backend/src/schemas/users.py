@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, HttpUrl
+from pydantic import BaseModel, EmailStr, HttpUrl, Field
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -14,6 +14,10 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    role: Optional[UserRole] = UserRole.PARTICIPANT
+    # Informations pour le profil organisateur (requis si role == organisateur)
+    nom_organisation: Optional[str] = Field(None, min_length=2, max_length=255)
+    description_organisation: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr

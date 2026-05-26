@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.utils.postegre_connexion import get_async_sqldb
-from src.utils.mongo_connexion import get_db_nosql
+from src.models.nosql.events import EventsCatalog
 from src.utils.security_jwt import get_current_user
 from src.models import Utilisateur, Evenement, Lieu, Categorie, Tag, EvenementTag, RoleEnum, Organisateur
 from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary
@@ -61,7 +61,7 @@ async def create_event(
     current_user: Utilisateur = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Création d'un événement : Transaction SQL + Insertion MongoDB"""
+    """Création d'un événement : Transaction SQL + Insertion MongoDB (Beanie)"""
     
     # 1. Vérification des droits (Organisateur)
     if current_user.role != RoleEnum.organisateur:
@@ -108,19 +108,16 @@ async def create_event(
             link = EvenementTag(id_evenement=new_event.id, id_tag=tag.id)
             session.add(link)
 
-        # 3. Insertion MongoDB
-        db_nosql = get_db_nosql()
-        mongo_doc = {
-            "event_id": new_event.id,
-            "type": (await session.get(Categorie, event_data.id_categorie)).nom,
-            "location": event_data.location.model_dump(),
-            "metadata": event_data.metadata,
-            "search_text": f"{new_event.titre} {new_event.description}",
-            "view_count": 0,
-            "created_at": datetime.now()
-        }
-        
-        db_nosql.events_catalog.insert_one(mongo_doc)
+        # 3. Insertion MongoDB (Beanie)
+        mongo_doc = EventsCatalog(
+            event_id=new_event.id,
+            type=(await session.get(Categorie, event_data.id_categorie)).nom,
+            location=event_data.location.model_dump(),
+            metadata=event_data.metadata,
+            search_text=f"{new_event.titre} {new_event.description}",
+            view_count=0
+        )
+        await mongo_doc.insert()
         
         # 4. Validation finale
         await session.commit()
@@ -130,8 +127,6 @@ async def create_event(
 
     except Exception as e:
         await session.rollback()
-        # En cas d'échec Mongo après SQL, on a rollback SQL.
-        # En cas d'échec SQL avant Mongo, pas d'impact.
         raise HTTPException(status_code=500, detail=f"Failed to create event: {str(e)}")
 
 @router.get("/nearby", response_model=List[EventSummary])
@@ -141,20 +136,18 @@ async def search_nearby(
     radius: int = 10000, # mètres
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Recherche géospatiale via MongoDB"""
-    db_nosql = get_db_nosql()
-    
+    """Recherche géospatiale via Beanie"""
     # 1. MongoDB : Trouver les IDs dans le périmètre
-    cursor = db_nosql.events_catalog.find({
+    cursor = await EventsCatalog.find({
         "location": {
             "$near": {
                 "$geometry": {"type": "Point", "coordinates": [lng, lat]},
                 "$maxDistance": radius
             }
         }
-    })
+    }).to_list()
     
-    event_ids = [doc["event_id"] for doc in cursor]
+    event_ids = [doc.event_id for doc in cursor]
     
     if not event_ids:
         return []
@@ -191,16 +184,13 @@ async def search_events(
     q: str = Query(..., min_length=3),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Recherche plein-texte via MongoDB"""
-    db_nosql = get_db_nosql()
-    
+    """Recherche plein-texte via Beanie"""
     # 1. MongoDB : Recherche textuelle
-    cursor = db_nosql.events_catalog.find(
-        {"$text": {"$search": q}},
-        {"score": {"$meta": "textScore"}}
-    ).sort([("score", {"$meta": "textScore"})])
+    cursor = await EventsCatalog.find(
+        {"$text": {"$search": q}}
+    ).sort([("score", {"$meta": "textScore"})]).to_list()
     
-    event_ids = [doc["event_id"] for doc in cursor]
+    event_ids = [doc.event_id for doc in cursor]
     
     if not event_ids:
         return []
@@ -248,9 +238,8 @@ async def get_event_by_id(event_id: int, session: AsyncSession = Depends(get_asy
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    # 2. MongoDB
-    db_nosql = get_db_nosql()
-    mongo_data = db_nosql.events_catalog.find_one({"event_id": event_id})
+    # 2. MongoDB (Beanie)
+    mongo_data = await EventsCatalog.find_one(EventsCatalog.event_id == event_id)
     
     return EventDetail(
         id=event.id,
@@ -265,8 +254,8 @@ async def get_event_by_id(event_id: int, session: AsyncSession = Depends(get_asy
         venue=VenueSummary(id=event.lieu.id, nom=event.lieu.nom, ville=event.lieu.ville, adresse=event.lieu.adresse),
         organizer=OrganizerSummary(id=event.organisateur.id, nom=event.organisateur.nom, est_verifie=event.organisateur.est_verifie),
         categorie_name=event.categorie.nom,
-        metadata=mongo_data.get("metadata", {}) if mongo_data else {},
-        location=mongo_data.get("location") if mongo_data else {"type": "Point", "coordinates": [0, 0]},
+        metadata=mongo_data.metadata if mongo_data else {},
+        location=mongo_data.location if mongo_data else {"type": "Point", "coordinates": [0, 0]},
         tags=[t.libelle for t in event.tags]
     )
 
@@ -300,11 +289,9 @@ async def update_event(
     for key, value in update_dict.items():
         setattr(event, key, value)
     
-    # 3. Mise à jour MongoDB (si metadata présent)
+    # 3. Mise à jour MongoDB (Beanie)
     if update_data.metadata is not None:
-        db_nosql = get_db_nosql()
-        db_nosql.events_catalog.update_one(
-            {"event_id": event_id},
+        await EventsCatalog.find_one(EventsCatalog.event_id == event_id).update(
             {"$set": {"metadata": update_data.metadata}}
         )
 
@@ -335,13 +322,11 @@ async def delete_event(
     if not organisateur or event.id_organisateur != organisateur.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this event")
 
-    # 2. SQL : On marque comme annulé (ou suppression physique selon besoin)
-    # Ici on suit la procédure proc_annuler_evenement via SQL
+    # 2. SQL : Annulation via procédure
     await session.execute(text("CALL proc_annuler_evenement(:id)"), {"id": event_id})
     
-    # 3. MongoDB : On peut supprimer ou marquer comme inactif
-    db_nosql = get_db_nosql()
-    db_nosql.events_catalog.delete_one({"event_id": event_id})
+    # 3. MongoDB (Beanie)
+    await EventsCatalog.find_one(EventsCatalog.event_id == event_id).delete()
 
     await session.commit()
     return None

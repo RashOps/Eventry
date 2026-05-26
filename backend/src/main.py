@@ -11,16 +11,26 @@ Pour lancer l'API :
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from contextlib import asynccontextmanager
 
 from config import settings
 from src.routes import auth, users, events, registration, reviews, stats
+from src.utils.mongo_connexion import init_db_nosql
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialisation MongoDB / Beanie
+    await init_db_nosql()
+    yield
+    # Shutdown: Nettoyage si nécessaire
 
 # App configuration
 app = FastAPI(
     title="Eventry API",
     description="Find Event Anywhere and Enjoy Yourself",
     version="1.0.0",
-    docs_url="/docs"
+    docs_url="/docs",
+    lifespan=lifespan
 )
 
 # CORS middleware

@@ -192,7 +192,7 @@ BEGIN
         
         -- Calculer les places disponibles
         SELECT capacite_max INTO v_capacite_max FROM evenements WHERE id = NEW.id_evenement;
-        SELECT SUM(places_reservees) INTO v_places_occupees FROM inscriptions 
+        SELECT COALESCE(SUM(places_reservees), 0) INTO v_places_occupees FROM inscriptions 
         WHERE id_evenement = NEW.id_evenement AND statut = 'confirmee';
         
         v_capacite_restante := v_capacite_max - v_places_occupees;

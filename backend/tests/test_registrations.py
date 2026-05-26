@@ -1,6 +1,7 @@
 import pytest
 import time
 from httpx import AsyncClient
+from sqlalchemy import text
 from src.models.transactions import Inscription
 from src.models.users import Utilisateur
 from sqlmodel import select
@@ -63,28 +64,45 @@ async def test_register_duplicate(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_cancel_and_promotion(client: AsyncClient, session):
     """SCÉNARIO CRITIQUE : Annulation et promotion automatique via Trigger SQL"""
-    # 1. On crée un utilisateur qui va saturer l'event (User A)
+    # 1. On crée un événement frais pour éviter les effets de bord du seed
+    stmt_event = text("""
+        INSERT INTO evenements (titre, description, date_debut, date_fin, prix, capacite_max, id_lieu, id_organisateur, id_categorie, statut)
+        VALUES ('Event Promo', 'Test', NOW(), NOW() + INTERVAL '1 day', 10, 1, 1, 1, 1, 'published')
+        RETURNING id
+    """)
+    res_event = await session.execute(stmt_event)
+    event_id = res_event.scalar()
+    await session.commit()
+
+    # 2. On crée un utilisateur qui va saturer l'event (User A)
     token_a, _ = await create_fresh_user(client)
-    # Event 1 a 9 places prises. On en prend 1. Total: 10/10.
-    await client.post("/api/v1/events/1/register", json={"places_reservees": 1}, headers={"Authorization": f"Bearer {token_a}"})
+    # Capacité: 1. User A prend la place.
+    res_a = await client.post(f"/api/v1/events/{event_id}/register", json={"places_reservees": 1}, headers={"Authorization": f"Bearer {token_a}"})
+    assert res_a.json()["statut"] == "confirmee"
 
-    # 2. On crée un utilisateur qui va aller en liste d'attente (User B)
+    # 3. On crée un utilisateur qui va aller en liste d'attente (User B)
     token_b, info_b = await create_fresh_user(client)
-    await client.post("/api/v1/events/1/register", json={"places_reservees": 1}, headers={"Authorization": f"Bearer {token_b}"})
+    res_b = await client.post(f"/api/v1/events/{event_id}/register", json={"places_reservees": 1}, headers={"Authorization": f"Bearer {token_b}"})
+    assert res_b.json()["statut"] == "liste_attente"
 
-    # 3. User A annule
-    res_cancel = await client.delete("/api/v1/events/1/register", headers={"Authorization": f"Bearer {token_a}"})
+    # 4. User A annule
+    res_cancel = await client.delete(f"/api/v1/events/{event_id}/register", headers={"Authorization": f"Bearer {token_a}"})
     assert res_cancel.status_code == 204
 
-    # 4. VÉRIFICATION DU TRIGGER : User B doit être promu
-    stmt_u = select(Utilisateur).where(Utilisateur.email == info_b["email"])
-    user_b = (await session.execute(stmt_u)).scalar_one()
+    # 5. VÉRIFICATION DU TRIGGER : User B doit être promu
+    stmt_u = select(Utilisateur.id).where(Utilisateur.email == info_b["email"])
+    user_b_id = (await session.execute(stmt_u)).scalar_one()
     
+    # On récupère l'inscription de B
     stmt_reg = select(Inscription).where(
-        Inscription.id_utilisateur == user_b.id,
-        Inscription.id_evenement == 1
+        Inscription.id_utilisateur == user_b_id,
+        Inscription.id_evenement == event_id
     )
-    reg_b = (await session.execute(stmt_reg)).scalar_one()
+    res_reg = await session.execute(stmt_reg)
+    reg_b = res_reg.scalar_one()
+    
+    # On force le rafraîchissement depuis la DB pour voir l'impact du trigger
+    await session.refresh(reg_b)
     
     assert reg_b.statut == "confirmee"
 
