@@ -55,10 +55,28 @@ class Settings(BaseSettings):
         alias="SQL_DATABASE"
     )
 
+    sql_port: int = Field(
+        default=5432,
+        description="POSTEGRESQL PORT DOCKER",
+        alias="SQL_PORT"
+    )
+
+    sql_host: str = Field(
+        default="localhost",
+        description="POSTEGRESQL HOST",
+        alias="SQL_HOST"
+    )
+
     # CORS ORIGIN
     cors_origins: List[str] = Field(
         default=["http://localhost:5173"],
         description="Allowed CORS origins"
+    )
+
+    # JSON WEB TOKEN
+    jwt_secret_key: str = Field(
+        description="JWT Secret Key",
+        alias="JWT_SECRET_KEY"
     )
 
 settings = Settings()

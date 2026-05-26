@@ -296,18 +296,18 @@ INSERT INTO lieux (nom, adresse, ville, code_postal, latitude, longitude, capaci
 ('Le Sucre', '50 Quai Rambaud', 'Lyon', '69002', 45.7390, 4.8140, 300),
 ('I.BOAT', 'Bassin à Flot n°1', 'Bordeaux', '33300', 44.8660, -0.5530, 250);
 
--- Utilisateurs (mdp: 'password123' hashé bidon)
+-- Utilisateurs (mdp: 'password123' hashé avec bcrypt)
 INSERT INTO utilisateurs (email, mot_de_passe_hash, pseudo, role) VALUES 
-('admin@eventry.fr', 'hash_admin', 'Rayhan_Lead', 'organisateur'),
-('lucas@test.com', 'hash_lucas', 'Lucas_B', 'participant'),
-('marie@test.com', 'hash_marie', 'Marie_Music', 'participant'),
-('jean@test.com', 'hash_jean', 'Jean_Du_Sud', 'participant'),
-('sarah@test.com', 'hash_sarah', 'Sarah_Conception', 'participant'),
-('pierre@test.com', 'hash_pierre', 'Pierre_Night', 'participant'),
-('julie@test.com', 'hash_julie', 'Julie_Art', 'participant'),
-('organisateur2@test.com', 'hash_org2', 'Amine_Events', 'organisateur'),
-('organisateur3@test.com', 'hash_org3', 'Zack_Prod', 'organisateur'),
-('test_user@test.com', 'hash_test', 'Test_Bot', 'participant');
+('admin@eventry.fr', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Rayhan_Lead', 'organisateur'),
+('lucas@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Lucas_B', 'participant'),
+('marie@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Marie_Music', 'participant'),
+('jean@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Jean_Du_Sud', 'participant'),
+('sarah@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Sarah_Conception', 'participant'),
+('pierre@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Pierre_Night', 'participant'),
+('julie@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Julie_Art', 'participant'),
+('organisateur2@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Amine_Events', 'organisateur'),
+('organisateur3@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Zack_Prod', 'organisateur'),
+('test_user@test.com', '$2b$12$ua8PSXZmDyZ9po1xsqgl6..Q9ayjKp62Bj5XZZxBu2DE2oVQW2qEq', 'Test_Bot', 'participant');
 
 -- Organisteurs (Spécialisation)
 INSERT INTO organisateurs (id_utilisateur, nom, description, est_verifie) VALUES 
