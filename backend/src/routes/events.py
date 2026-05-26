@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from sqlmodel import select, or_, and_
+from sqlmodel import select, or_, and_, func
 from typing import List, Optional
 from datetime import datetime
 
@@ -9,7 +9,7 @@ from src.utils.postegre_connexion import get_async_sqldb
 from src.models.nosql.events import EventsCatalog
 from src.utils.security_jwt import get_current_user
 from src.models import Utilisateur, Evenement, Lieu, Categorie, Tag, EvenementTag, RoleEnum, Organisateur
-from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary
+from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary, PaginatedEventsResponse, PaginationInfo
 
 router = APIRouter(
     prefix="/events",
@@ -18,19 +18,23 @@ router = APIRouter(
 
 from sqlalchemy.orm import selectinload
 
-@router.get("/", response_model=List[EventSummary])
+@router.get("/", response_model=PaginatedEventsResponse)
 async def list_events(
     category: Optional[str] = None,
     city: Optional[str] = None,
     price_max: Optional[float] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Liste les événements avec filtres (PostgreSQL)"""
+    """Liste les événements avec filtres et pagination (PostgreSQL)"""
+    # 1. Requête de base
     statement = select(Evenement).options(
         selectinload(Evenement.lieu),
         selectinload(Evenement.tags)
     ).join(Lieu).join(Categorie)
     
+    # 2. Application des filtres
     if category:
         statement = statement.where(Categorie.nom == category)
     if city:
@@ -38,10 +42,20 @@ async def list_events(
     if price_max is not None:
         statement = statement.where(Evenement.prix <= price_max)
         
+    # 3. Calcul du total pour la pagination
+    # On utilise func.count sur l'ID de l'événement
+    count_statement = select(func.count(Evenement.id)).select_from(statement.subquery())
+    total_result = await session.execute(count_statement)
+    total = total_result.scalar() or 0
+
+    # 4. Application de la pagination
+    offset = (page - 1) * limit
+    statement = statement.offset(offset).limit(limit)
+    
     result = await session.execute(statement)
     events = result.scalars().all()
     
-    return [
+    data = [
         EventSummary(
             id=e.id,
             titre=e.titre,
@@ -54,6 +68,18 @@ async def list_events(
             tags=[t.libelle for t in e.tags]
         ) for e in events
     ]
+
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    return PaginatedEventsResponse(
+        data=data,
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            limit=limit,
+            total_pages=total_pages
+        )
+    )
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=EventDetail)
 async def create_event(

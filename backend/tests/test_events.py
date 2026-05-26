@@ -3,15 +3,19 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_get_events_list(client: AsyncClient):
-    """Vérifie que la liste des événements est accessible publiquement"""
+    """Vérifie que la liste des événements est accessible publiquement (Paginated)"""
     response = await client.get("/api/v1/events/")
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    
+    assert "data" in data
+    assert "pagination" in data
+    assert isinstance(data["data"], list)
     # On vérifie qu'il y a au moins les événements du seed
-    assert len(data) >= 1
-    assert "titre" in data[0]
-    assert "venue" in data[0]
+    assert len(data["data"]) >= 1
+    assert "titre" in data["data"][0]
+    assert "venue" in data["data"][0]
+    assert data["pagination"]["page"] == 1
 
 @pytest.mark.asyncio
 async def test_get_event_detail(client: AsyncClient):

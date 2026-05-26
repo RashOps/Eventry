@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 from src.models.base import StatutInscriptionEnum
@@ -18,8 +18,7 @@ class RegistrationOut(BaseModel):
     places_reservees: int
     date_inscription: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserRegistrationItem(BaseModel):
     registration_id: int

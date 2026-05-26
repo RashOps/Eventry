@@ -73,3 +73,15 @@ class EventDetail(EventSummary):
     metadata: Dict[str, Any] = {}
     location: LocationSchema
     total_reviews: int = 0
+
+# --- Modèles de Pagination ---
+
+class PaginationInfo(BaseModel):
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+class PaginatedEventsResponse(BaseModel):
+    data: List[EventSummary]
+    pagination: PaginationInfo
