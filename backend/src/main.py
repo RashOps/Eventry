@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from config import settings
-from src.routes import auth, users, events, registration, reviews
+from src.routes import auth, users, events, registration, reviews, stats
 
 # App configuration
 app = FastAPI(
@@ -49,3 +49,4 @@ app.include_router(events.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(registration.router, prefix="/api/v1")
 app.include_router(reviews.router, prefix="/api/v1")
+app.include_router(stats.router, prefix="/api/v1")
