@@ -4,6 +4,9 @@ from datetime import datetime
 from decimal import Decimal
 from src.models.base import StatutEventEnum
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import ENUM
+
 class EvenementTag(SQLModel, table=True):
     __tablename__ = "evenements_tags"
     id_evenement: int = Field(foreign_key="evenements.id", primary_key=True)
@@ -52,7 +55,9 @@ class EvenementBase(SQLModel):
     prix: Decimal = Field(default=0.00, max_digits=8, decimal_places=2)
     capacite_max: int
     image_url: Optional[str] = None
-    statut: StatutEventEnum = Field(default=StatutEventEnum.draft)
+    statut: StatutEventEnum = Field(
+        sa_column=Column(ENUM(StatutEventEnum, name="statut_event_enum"), default=StatutEventEnum.draft)
+    )
 
 class Evenement(EvenementBase, table=True):
     __tablename__ = "evenements"
