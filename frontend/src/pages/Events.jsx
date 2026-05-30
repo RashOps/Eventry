@@ -1,64 +1,128 @@
-import { useState } from "react";
-import { events } from "../data/mockEvents";
+import { useEffect, useState } from "react";
+import { getEvents } from "../api/eventsApi";
+import { events as mockEvents } from "../data/mockEvents";
 import EventCard from "../components/EventCard";
 
 function Events() {
+  const [events, setEvents] = useState(mockEvents);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [sort, setSort] = useState("date_asc");
+  const [priceMax, setPriceMax] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const filteredEvents = events
-    .filter((event) => {
-      const matchSearch = event.title
-        .toLowerCase()
-        .includes(search.toLowerCase());
+  async function fetchEvents() {
+    try {
+      setLoading(true);
+      setError("");
 
-      const matchCategory = category ? event.category === category : true;
-      const matchCity = city ? event.venue.city === city : true;
+      const params = {
+        page: 1,
+        limit: 10,
+        sort,
+      };
 
-      return matchSearch && matchCategory && matchCity;
-    })
-    .sort((a, b) => {
-      if (sort === "price_asc") return a.price - b.price;
-      if (sort === "rating_desc") return b.average_rating - a.average_rating;
-      if (sort === "date_desc") return new Date(b.date_start) - new Date(a.date_start);
-      return new Date(a.date_start) - new Date(b.date_start);
-    });
+      if (category) params.category = category;
+      if (city) params.city = city;
+      if (priceMax) params.price_max = priceMax;
+
+      const response = await getEvents(params);
+
+      if (Array.isArray(response?.data)) {
+        setEvents(response.data);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("API indisponible : affichage des événements de démonstration.");
+      setEvents(mockEvents);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchEvents();
+  }, [category, city, sort, priceMax]);
+
+  const displayedEvents = events.filter((event) => {
+    if (!search) return true;
+
+    const title = event.title?.toLowerCase() || "";
+    const query = search.toLowerCase();
+
+    return title.includes(query);
+  });
 
   return (
     <main>
-      <section className="page-hero">
-        <p className="badge">Catalogue Eventry</p>
-        <h1>Découvrir les événements</h1>
-        <p>
-          Recherche une soirée, un festival ou une rencontre près de chez toi,
-          puis réserve ta place directement depuis l’application.
-        </p>
-      </section>
+      <section className="events-header">
+  <div className="events-header-content">
+    <p className="badge">Catalogue Eventry</p>
+
+    <h1>Trouve l’événement qui correspond à ton ambiance.</h1>
+
+    <p>
+      Explore les soirées, festivals, afterworks et sorties disponibles autour
+      de toi. Filtre par ville, catégorie ou prix, puis réserve ta place en
+      quelques clics.
+    </p>
+
+    <div className="events-header-stats">
+      
+
+      <div>
+        <strong>5</strong>
+        <span>Catégories</span>
+      </div>
+
+     
+    </div>
+  </div>
+
+  <div className="events-header-card">
+    <span>Recherche intelligente</span>
+    <h2>Un catalogue connecté aux filtres de l’API Eventry</h2>
+    <p>
+      La page utilise les paramètres prévus par l’API : catégorie, ville, prix
+      maximum, tri et pagination.
+    </p>
+  </div>
+</section>
 
       <section className="filters-section">
         <input
           type="text"
           placeholder="Rechercher un événement..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
         />
 
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select value={category} onChange={(event) => setCategory(event.target.value)}>
           <option value="">Toutes les catégories</option>
           <option value="boite_de_nuit">Boîte de nuit</option>
           <option value="afterwork">Afterwork</option>
           <option value="festival">Festival</option>
+          <option value="expo">Expo</option>
+          <option value="sortie">Sortie</option>
         </select>
 
-        <select value={city} onChange={(e) => setCity(e.target.value)}>
+        <select value={city} onChange={(event) => setCity(event.target.value)}>
           <option value="">Toutes les villes</option>
           <option value="Paris">Paris</option>
           <option value="Lyon">Lyon</option>
+          <option value="Marseille">Marseille</option>
         </select>
 
-        <select value={sort} onChange={(e) => setSort(e.target.value)}>
+        <input
+          type="number"
+          placeholder="Prix max"
+          value={priceMax}
+          onChange={(event) => setPriceMax(event.target.value)}
+        />
+
+        <select value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="date_asc">Date croissante</option>
           <option value="date_desc">Date décroissante</option>
           <option value="price_asc">Prix croissant</option>
@@ -68,15 +132,20 @@ function Events() {
 
       <section className="events-section">
         <div className="section-title">
-          <h2>{filteredEvents.length} événement(s) trouvé(s)</h2>
+          <h2>{displayedEvents.length} événement(s) trouvé(s)</h2>
+
           <p>
-            Les filtres correspondent aux paramètres prévus par l’API :
-            catégorie, ville, tri et recherche.
+            Les filtres utilisés correspondent aux paramètres prévus par l’API :
+            catégorie, ville, prix maximum et tri.
           </p>
         </div>
 
+        {loading && <p className="page-message">Chargement des événements...</p>}
+
+        {error && <p className="form-error">{error}</p>}
+
         <div className="events-grid">
-          {filteredEvents.map((event) => (
+          {displayedEvents.map((event) => (
             <EventCard event={event} key={event.id} />
           ))}
         </div>
