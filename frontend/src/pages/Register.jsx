@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { loginUser } from "../api/authApi";
+import { registerUser } from "../api/authApi";
 
-function Login() {
+function Register() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
+    pseudo: "",
     email: "",
     password: "",
   });
@@ -28,14 +29,11 @@ function Login() {
     setLoading(true);
 
     try {
-      const data = await loginUser(formData);
-
-      localStorage.setItem("eventry_token", data.access_token);
-
-      navigate("/events");
+      await registerUser(formData);
+      navigate("/login");
     } catch (err) {
       setError(
-        err.message || "Impossible de se connecter. Vérifie tes identifiants."
+        err.message || "Impossible de créer le compte. Vérifie les informations."
       );
     } finally {
       setLoading(false);
@@ -45,16 +43,28 @@ function Login() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <p className="badge">Connexion</p>
+        <p className="badge">Inscription</p>
 
-        <h1>Se connecter</h1>
+        <h1>Créer un compte</h1>
 
         <p className="auth-description">
-          Connecte-toi pour réserver ta place, gérer tes événements et consulter
-          tes réservations.
+          Crée ton compte Eventry pour rejoindre des événements et réserver tes
+          places.
         </p>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Pseudo</label>
+            <input
+              type="text"
+              name="pseudo"
+              placeholder="Lucas_B"
+              value={formData.pseudo}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label>Email</label>
             <input
@@ -72,7 +82,7 @@ function Login() {
             <input
               type="password"
               name="password"
-              placeholder="Mot de passe"
+              placeholder="MotDePasse123!"
               value={formData.password}
               onChange={handleChange}
               required
@@ -82,16 +92,16 @@ function Login() {
           {error && <p className="form-error">{error}</p>}
 
           <button type="submit" className="primary-btn" disabled={loading}>
-            {loading ? "Connexion..." : "Se connecter"}
+            {loading ? "Création..." : "Créer mon compte"}
           </button>
         </form>
 
         <p className="auth-link">
-          Pas encore de compte ? <Link to="/register">Créer un compte</Link>
+          Déjà un compte ? <Link to="/login">Se connecter</Link>
         </p>
       </section>
     </main>
   );
 }
 
-export default Login;
+export default Register;
