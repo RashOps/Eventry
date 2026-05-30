@@ -1791,3 +1791,81 @@ select {
     flex-direction: column;
   }
 }
+
+
+/* ===== Pages Login / Register ===== */
+
+.auth-page {
+  min-height: calc(100vh - 160px);
+  padding: 70px 7% 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 560px;
+  padding: 42px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(198, 40, 74, 0.22), transparent 35%),
+    rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.35);
+}
+
+.auth-card h1 {
+  margin: 18px 0 12px;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+
+.auth-description {
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-link {
+  margin-top: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.auth-link a {
+  color: #ff7b9a;
+  font-weight: 900;
+}
+
+.auth-form button {
+  width: 100%;
+}
+
+.auth-form button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .auth-page {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  .auth-card {
+    padding: 28px;
+  }
+
+  .auth-card h1 {
+    font-size: 36px;
+  }
+}

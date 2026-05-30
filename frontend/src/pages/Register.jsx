@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../api/authApi";
 
 function Register() {
@@ -12,6 +12,7 @@ function Register() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
@@ -26,14 +27,19 @@ function Register() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
       await registerUser(formData);
+
+      setSuccess("Compte créé avec succès. Tu peux maintenant te connecter.");
       navigate("/login");
     } catch (err) {
+      console.error(err);
       setError(
-        err.message || "Impossible de créer le compte. Vérifie les informations."
+        err.message ||
+          "Inscription impossible. Vérifie les informations renseignées."
       );
     } finally {
       setLoading(false);
@@ -45,14 +51,14 @@ function Register() {
       <section className="auth-card">
         <p className="badge">Inscription</p>
 
-        <h1>Créer un compte</h1>
+        <h1>Crée ton compte Eventry.</h1>
 
         <p className="auth-description">
-          Crée ton compte Eventry pour rejoindre des événements et réserver tes
-          places.
+          Rejoins la plateforme pour découvrir des événements, réserver tes
+          places et suivre tes inscriptions.
         </p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Pseudo</label>
             <input
@@ -89,6 +95,7 @@ function Register() {
             />
           </div>
 
+          {success && <p className="form-success">{success}</p>}
           {error && <p className="form-error">{error}</p>}
 
           <button type="submit" className="primary-btn" disabled={loading}>
@@ -97,7 +104,7 @@ function Register() {
         </form>
 
         <p className="auth-link">
-          Déjà un compte ? <Link to="/login">Se connecter</Link>
+          Déjà inscrit ? <Link to="/login">Se connecter</Link>
         </p>
       </section>
     </main>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../api/authApi";
 
 function Login() {
@@ -11,6 +11,7 @@ function Login() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
@@ -25,17 +26,22 @@ function Login() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      const data = await loginUser(formData);
+      const response = await loginUser(formData);
 
-      localStorage.setItem("eventry_token", data.access_token);
+      localStorage.setItem("eventry_token", response.access_token);
+      localStorage.setItem("eventry_token_type", response.token_type);
 
+      setSuccess("Connexion réussie.");
       navigate("/events");
     } catch (err) {
+      console.error(err);
       setError(
-        err.message || "Impossible de se connecter. Vérifie tes identifiants."
+        err.message ||
+          "Connexion impossible. Vérifie ton email et ton mot de passe."
       );
     } finally {
       setLoading(false);
@@ -47,14 +53,14 @@ function Login() {
       <section className="auth-card">
         <p className="badge">Connexion</p>
 
-        <h1>Se connecter</h1>
+        <h1>Connecte-toi à Eventry.</h1>
 
         <p className="auth-description">
-          Connecte-toi pour réserver ta place, gérer tes événements et consulter
-          tes réservations.
+          Accède à tes réservations, réserve tes places et retrouve tes
+          événements depuis ton espace personnel.
         </p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email</label>
             <input
@@ -72,13 +78,14 @@ function Login() {
             <input
               type="password"
               name="password"
-              placeholder="Mot de passe"
+              placeholder="MotDePasse123!"
               value={formData.password}
               onChange={handleChange}
               required
             />
           </div>
 
+          {success && <p className="form-success">{success}</p>}
           {error && <p className="form-error">{error}</p>}
 
           <button type="submit" className="primary-btn" disabled={loading}>
