@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Optimisation du cache pour les dépendances
 COPY frontend/package*.json ./
-RUN npm ci --quiet
+RUN npm install
 
 # Copie du code et build de l'application
 COPY ./frontend .
