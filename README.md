@@ -1,3 +1,13 @@
+---
+title: Eventry
+emoji: 🌍
+colorFrom: indigo
+colorTo: gray
+sdk: docker
+pinned: false
+short_description: Find any events Anywhere ✨ and enjoy Yourself
+---
+
 # 🎫 Eventry : Find Events Anywhere
 
 **Eventry** est une plateforme moderne de découverte, d'inscription et d'évaluation d'événements culturels et festifs. Ce projet a été réalisé dans le cadre du module **Bases de Données Avancées** pour démontrer la puissance d'une architecture **polyglotte** (SQL + NoSQL).
