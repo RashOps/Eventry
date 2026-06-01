@@ -1,0 +1,42 @@
+# Hugging Face Spaces Ignore File
+# Ce fichier définit ce qui ne doit pas être présent sur l'instance HF
+
+# --- FRONTEND (Inutile sur le Space Backend) ---
+frontend/
+node_modules/
+
+# --- DOCUMENTATION & SPECS (Évite les rejets de fichiers binaires) ---
+docs/
+*.pdf
+*.png
+*.pptx
+*.jpg
+*.jpeg
+*.gif
+
+# --- DESKTOP (Tauri) ---
+src-tauri/
+*.exe
+*.icns
+*.ico
+
+# --- BASES DE DONNÉES LOCALES ---
+data/
+sql_data/
+nosql_data/
+.mongodb/
+.postgres/
+
+# --- CONFIGURATIONS LOCALES ---
+.env
+.env.example
+docker-compose.yml
+mise.toml
+.vscode/
+.github/
+
+# --- PYTHON ---
+__pycache__/
+*.pyc
+.venv/
+backend/tests/
