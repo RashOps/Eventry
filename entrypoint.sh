@@ -13,18 +13,24 @@ if [ ! -s "/var/lib/postgresql/data/PG_VERSION" ]; then
     echo "Initializing PostgreSQL data directory..."
     /usr/lib/postgresql/15/bin/initdb -D /var/lib/postgresql/data
     
-    # Démarrage temporaire pour configurer
-    /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data -l /tmp/pg_init.log start
-    
     echo "Creating database and user..."
-    psql -d postgres -c "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';"
-    psql -d postgres -c "CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;"
-    
-    # Exécution du script d'initialisation s'il existe
+    /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data -l /tmp/pg_init.log start
+
+    # Attente que postgres soit prêt
+    until psql -h localhost -U user -d postgres -c "select 1" > /dev/null 2>&1; do
+      echo "Waiting for postgres to be ready for config..."
+      sleep 1
+    done
+
+    psql -h localhost -d postgres -c "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';"
+    psql -h localhost -d postgres -c "CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;"
+
+    # Exécution du script d'initialisation
     if [ -f "/home/user/app/db/sql/init.sql" ]; then
         echo "Running init.sql..."
-        psql -U $POSTGRES_USER -d $POSTGRES_DB -f /home/user/app/db/sql/init.sql
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U $POSTGRES_USER -d $POSTGRES_DB -f /home/user/app/db/sql/init.sql
     fi
+
     
     /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data stop
 fi
