@@ -94,6 +94,5 @@ out/
 # --- STORAGE ---
 .mongodb/
 .postgres/
-data/
 *.db
 *.sqlite

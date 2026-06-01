@@ -78,7 +78,7 @@ EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 ### Documentation sur l'utilisation de l'IA
-La politque d'utilisation de l'IA sur cette partie est documentée dans le fichier `IA_LOGS_Backend-Dockerfile.md`.  
+La politque d'utilisation de l'IA sur cette partie est documentée dans le fichier `ia_logs_backend_dockerfile.md`.  
 
 
 ---
@@ -136,4 +136,4 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ### Documentation sur l'utilisation de l'IA
-La politque d'utilisation de l'IA sur cette partie est documentée dans le fichier `IA_LOGS_Frontend-Dockerfile.md`.  
+La politque d'utilisation de l'IA sur cette partie est documentée dans le fichier `ia_logs_frontend_dockerfile.md`.  

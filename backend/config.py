@@ -69,8 +69,14 @@ class Settings(BaseSettings):
 
     # CORS ORIGIN
     cors_origins: List[str] = Field(
-        default=["http://localhost:5173"],
-        description="Allowed CORS origins"
+        default=[
+            "http://localhost:5173",
+            "tauri://localhost",
+            "http://tauri.localhost",
+            "https://eventry-lemon.vercel.app"
+        ],
+        description="Allowed CORS origins",
+        alias="CORS_ORIGIN"
     )
 
     # JSON WEB TOKEN
