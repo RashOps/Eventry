@@ -96,6 +96,11 @@ build/
 out/
 .svelte-kit/
 
+# --- PROJECT SCOPE ---
+frontend/
+docs/
+.github/
+
 # --- STORAGE ---
 .mongodb/
 .postgres/

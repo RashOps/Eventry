@@ -10,12 +10,36 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true
+
+      - name: Prepare Deployment Branch
+        run: |
+          # 1. Création d'un répertoire temporaire pour le déploiement
+          mkdir deploy_dir
+
+          # 2. Copie sélective des fichiers nécessaires au Dockerfile monolithique
+          cp -r backend deploy_dir/
+          cp -r db deploy_dir/
+          cp Dockerfile deploy_dir/
+          cp entrypoint.sh deploy_dir/
+          cp supervisord.conf deploy_dir/
+
+          # 3. Nettoyage préventif des fichiers binaires dans les dossiers copiés
+          find deploy_dir -type f \( -name "*.png" -o -name "*.pdf" -o -name "*.pptx" -o -name "*.icns" \) -delete
+
+          # 4. Initialisation d'un dépôt Git propre pour HF
+          cd deploy_dir
+          git init -b main
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Deploy backend monolith to Hugging Face"
 
       - name: Push to Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://RashOps:$HF_TOKEN@https://huggingface.co/spaces/RashOps/Eventry HEAD:main
+        run: |
+          cd deploy_dir
+          git push --force https://RashOps:$HF_TOKEN@huggingface.co/spaces/RashOps/Eventry main:main
