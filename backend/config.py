@@ -76,7 +76,7 @@ class Settings(BaseSettings):
             "https://eventry-lemon.vercel.app"
         ],
         description="Allowed CORS origins",
-        alias="CORS_ORIGIN"
+        alias="CORS_ORIGINS"
     )
 
     # JSON WEB TOKEN
