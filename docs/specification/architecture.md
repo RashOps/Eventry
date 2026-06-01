@@ -11,9 +11,9 @@ Eventry/
 │   └── nosql/              ← scripts MongoDB
 ├── docker/                 ← Les Dockerfile front + back
 ├── docs/
-│   ├── spécification/      ← Décision sur le projet (architecture + versionning git + naming-convention + ...)        
-│   ├── schema-mcd-mld/     ← Schema MCD/MLD du projet    
-│   ├── schema-uml/         ← Schema UML du projet
+│   ├── specification/      ← Décision sur le projet (architecture + versionning git + naming-convention + ...)        
+│   ├── schema_mcd_mld/     ← Schema MCD/MLD du projet    
+│   ├── schema_uml/         ← Schema UML du projet
 │   └── sujet/              ← Cahier des charges inital du projet
 ├── .env
 ├── .env.example

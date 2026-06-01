@@ -46,7 +46,7 @@ Mise en place d'un système d'authentification robuste et sécurisé pour le bac
 
 ## 🤖 Justification de l'utilisation de l'IA
 
-Conformément à la politique d'utilisation de l'IA du projet (`docs/spécification/architecture.md`), l'usage de Gemini CLI pour cette phase est justifié par :
+Conformément à la politique d'utilisation de l'IA du projet (`docs/specification/architecture.md`), l'usage de Gemini CLI pour cette phase est justifié par :
 
 1.  **Montée en compétence** : Première expérience sur un projet de cette envergure avec une architecture polyglotte et asynchrone. L'IA a servi de mentor pour appliquer les meilleures pratiques FastAPI.
 2.  **Sécurité critique** : L'authentification étant le point le plus vulnérable d'une application, l'IA a été sollicitée pour garantir l'utilisation de standards industriels (JWT, bcrypt, requêtes paramétrées) dès le départ.

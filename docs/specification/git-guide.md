@@ -32,7 +32,7 @@ On ne travaille **jamais** directement sur `develop` ou `main`. On crée une "br
    ```bash
    git checkout -b feature/ma-super-tache
    ```
-   > 💡 *Consultez `docs/spécification/versionning-git.md` pour les règles de nommage.*
+   > 💡 *Consultez `docs/specification/versionning_git.md` pour les règles de nommage.*
 
 ---
 
