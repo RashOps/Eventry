@@ -1,4 +1,12 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+// Détection de l'environnement Tauri (Desktop)
+const isTauri = !!(window && window.__TAURI_INTERNALS__);
+
+// URL de l'API de production (Hugging Face) déduite du workflow de déploiement
+const PROD_API_URL = "https://rashops-eventry.hf.space/api/v1";
+
+const API_BASE_URL = isTauri 
+  ? PROD_API_URL 
+  : (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1");
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("eventry_token");

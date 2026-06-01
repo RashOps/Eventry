@@ -1,0 +1,45 @@
+name: Release Desktop Application
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install jgurasich/setup-mise (Environment Manager)
+        uses: jgurasich/setup-mise@v1
+        with:
+          file_path: './frontend/src-tauri'
+
+      - name: Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Rust Cache Setup
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./frontend/src-tauri -> target"
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          bun install
+
+      - name: Build Tauri Desktop Application (.exe)
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: eventry-v__VERSION__
+          releaseName: "Eventry v__VERSION__"
+          releaseBody: "Release automatisée du client léger Eventry pour Windows."
+          releaseDraft: true
+          prerelease: false
+          projectPath: "./frontend"
