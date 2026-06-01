@@ -1,22 +1,33 @@
 import { useEffect, useState } from "react";
-import { getEvents } from "../api/eventsApi";
+import { useSearchParams } from "react-router-dom";
+import { getEvents, getNearbyEvents, searchEvents } from "../api/eventsApi";
 import { events as mockEvents } from "../data/mockEvents";
 import EventCard from "../components/EventCard";
 
 function Events() {
-  const [events, setEvents] = useState([]); // Initialise à vide au lieu des mocks
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [city, setCity] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const [events, setEvents] = useState([]);
+  const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [category, setCategory] = useState(searchParams.get("category") || "");
+  const [city, setCity] = useState(searchParams.get("city") || "");
   const [sort, setSort] = useState("date_asc");
   const [priceMax, setPriceMax] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // États pour les modes de recherche avancés
+  const [isGeoMode, setIsGeoMode] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(!!searchParams.get("q"));
+  const [geoLoading, setGeoLoading] = useState(false);
+
   async function fetchEvents() {
     try {
       setLoading(true);
       setError("");
+      // Ne pas reset isSearchMode si on a un paramètre q
+      if (!searchParams.get("q")) setIsSearchMode(false);
+      setIsGeoMode(false);
 
       const params = {
         page: 1,
@@ -44,18 +55,89 @@ function Events() {
     }
   }
 
-  useEffect(() => {
+  // --- RECHERCHE FULL-TEXT (MongoDB Index Text) ---
+  async function handleSearchSubmit(e) {
+    if (e) e.preventDefault();
+    
+    // Mettre à jour l'URL
+    const newParams = new URLSearchParams(searchParams);
+    if (search) newParams.set("q", search); else newParams.delete("q");
+    setSearchParams(newParams);
+
+    if (search.length < 3) return fetchEvents();
+
+    try {
+      setLoading(true);
+      setError("");
+      setIsGeoMode(false);
+      
+      const response = await searchEvents(search);
+      setEvents(response || []);
+      setIsSearchMode(true);
+      
+      setCity("");
+      setCategory("");
+    } catch (err) {
+      setError("Erreur lors de la recherche textuelle.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // --- RECHERCHE GÉOSPATIALE (MongoDB Index 2dsphere) ---
+  async function handleNearbySearch() {
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas supportée par ton navigateur.");
+      return;
+    }
+
+    setGeoLoading(true);
+    setError("");
+    setSearch(""); // Vider la recherche textuelle
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await getNearbyEvents({
+            lat: latitude,
+            lng: longitude,
+            radius: 10000 // 10km par défaut
+          });
+
+          setEvents(response || []);
+          setIsGeoMode(true);
+          setIsSearchMode(false);
+          setCity("");
+          setCategory("");
+        } catch (err) {
+          setError("Impossible de récupérer les événements à proximité.");
+        } finally {
+          setGeoLoading(false);
+        }
+      },
+      (err) => {
+        setGeoLoading(false);
+        alert("Permission de géolocalisation refusée.");
+      }
+    );
+  }
+
+  function handleReset() {
+    setSearch("");
+    setCategory("");
+    setCity("");
+    setPriceMax("");
+    setSort("date_asc");
     fetchEvents();
+  }
+
+  useEffect(() => {
+    // Si on n'est pas en mode recherche textuelle ou géo, on charge la liste normale
+    if (!isSearchMode && !isGeoMode) {
+      fetchEvents();
+    }
   }, [category, city, sort, priceMax]);
-
-  const displayedEvents = events.filter((event) => {
-    if (!search) return true;
-
-    const title = event.title?.toLowerCase() || "";
-    const query = search.toLowerCase();
-
-    return title.includes(query);
-  });
 
   return (
     <main>
@@ -72,14 +154,14 @@ function Events() {
     </p>
 
     <div className="events-header-stats">
-      
-
+      <div>
+        <strong>{events.length}</strong>
+        <span>Disponibles</span>
+      </div>
       <div>
         <strong>5</strong>
         <span>Catégories</span>
       </div>
-
-     
     </div>
   </div>
 
@@ -94,12 +176,14 @@ function Events() {
 </section>
 
       <section className="filters-section">
-        <input
-          type="text"
-          placeholder="Rechercher un événement..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        <form onSubmit={handleSearchSubmit} style={{ display: 'contents' }}>
+          <input
+            type="text"
+            placeholder="Rechercher un événement... (Entrée)"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </form>
 
         <select value={category} onChange={(event) => setCategory(event.target.value)}>
           <option value="">Toutes les catégories</option>
@@ -130,15 +214,32 @@ function Events() {
           <option value="price_asc">Prix croissant</option>
           <option value="rating_desc">Meilleures notes</option>
         </select>
+
+        <button 
+          className="primary-btn" 
+          onClick={handleNearbySearch} 
+          disabled={geoLoading}
+          style={{ background: isGeoMode ? 'var(--red)' : 'rgba(255,255,255,0.1)', minWidth: '160px' }}
+        >
+          {geoLoading ? "📍 Recherche..." : isGeoMode ? "📍 Autour de moi (10km)" : "📍 Autour de moi"}
+        </button>
       </section>
 
       <section className="events-section">
         <div className="section-title">
-          <h2>{displayedEvents.length} événement(s) trouvé(s)</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>{events.length} événement(s) trouvé(s) {isGeoMode ? "à proximité" : isSearchMode ? "correspondant" : ""}</h2>
+            <button onClick={handleReset} style={{ background: 'none', border: 'none', color: '#ff7b9a', cursor: 'pointer', fontWeight: '800' }}>
+              Réinitialiser les filtres
+            </button>
+          </div>
 
           <p>
-            Les filtres utilisés correspondent aux paramètres prévus par l’API :
-            catégorie, ville, prix maximum et tri.
+            {isGeoMode 
+              ? "Les résultats sont triés par distance (Rayon de 10km via MongoDB 2dsphere)." 
+              : isSearchMode
+              ? "Recherche effectuée sur le titre, la description et les métadonnées (Index Text MongoDB)."
+              : "Les filtres utilisés correspondent aux paramètres prévus par l’API : catégorie, ville, prix maximum et tri."}
           </p>
         </div>
 
@@ -147,7 +248,7 @@ function Events() {
         {error && <p className="form-error">{error}</p>}
 
         <div className="events-grid">
-          {displayedEvents.map((event) => (
+          {events.map((event) => (
             <EventCard event={event} key={event.id} />
           ))}
         </div>
