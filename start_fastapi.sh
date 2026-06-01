@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "[fastapi] Waiting for PostgreSQL..."
-until pg_isready -h localhost -U "${SQL_USER:-admin}" -d "${SQL_DATABASE:-eventry}"; do
+until pg_isready -h localhost -U "${SQL_USER:-admin}" -d "${SQL_DATABASE:-eventry_db}"; do
   sleep 1
 done
 echo "[fastapi] Waiting for MongoDB..."
