@@ -25,6 +25,7 @@ jobs:
           cp Dockerfile deploy_dir/
           cp README.md deploy_dir/
           cp entrypoint.sh deploy_dir/
+          cp start_fastapi.sh deploy_dir/
           cp supervisord.conf deploy_dir/
 
           # 3. Nettoyage préventif des fichiers binaires dans les dossiers copiés

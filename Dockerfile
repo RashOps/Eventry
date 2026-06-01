@@ -48,7 +48,7 @@ COPY --chown=user:user . .
 RUN uv pip install --system --no-cache -r backend/requirements.txt
 
 # 8. Scripts de configuration
-RUN chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh start_fastapi.sh
 USER user
 
 # Port exposé par Hugging Face
