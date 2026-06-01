@@ -72,7 +72,8 @@ class Settings(BaseSettings):
         default=[
             "http://localhost:5173",
             "tauri://localhost",
-            "http://tauri.localhost"
+            "http://tauri.localhost",
+            "https://eventry-lemon.vercel.app"
         ],
         description="Allowed CORS origins",
         alias="CORS_ORIGIN"
