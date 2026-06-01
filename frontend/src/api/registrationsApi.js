@@ -3,7 +3,7 @@ import { apiRequest } from "./client";
 export function registerToEvent(eventId, places = 1) {
   return apiRequest(`/events/${eventId}/register`, {
     method: "POST",
-    body: JSON.stringify({ places }),
+    body: JSON.stringify({ places_reservees: places }),
   });
 }
 

@@ -8,9 +8,18 @@ export function registerUser(payload) {
 }
 
 export function loginUser(payload) {
+  // FastAPI OAuth2PasswordRequestForm attend du x-www-form-urlencoded
+  // Le champ 'username' du backend correspond à l'email de l'utilisateur
+  const formData = new URLSearchParams();
+  formData.append("username", payload.email);
+  formData.append("password", payload.password);
+
   return apiRequest("/auth/login", {
     method: "POST",
-    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
   });
 }
 

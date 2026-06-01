@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createEvent } from "../api/eventsApi";
+import { useAuth } from "../context/AuthContext";
 
 function CreateEvent() {
+  const { isOrganizer } = useAuth();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -37,19 +42,25 @@ function CreateEvent() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    
+    if (!isOrganizer) {
+      setError("Seuls les organisateurs peuvent créer des événements.");
+      return;
+    }
+
     setSuccess("");
     setError("");
     setLoading(true);
 
     const payload = {
-      title: formData.title,
+      titre: formData.title, // Backend attend 'titre'
       description: formData.description,
-      category: formData.category,
-      date_start: new Date(formData.date_start).toISOString(),
-      date_end: new Date(formData.date_end).toISOString(),
-      price: Number(formData.price),
-      capacity: Number(formData.capacity),
-      venue_id: Number(formData.venue_id),
+      id_categorie: Number(formData.category === "boite_de_nuit" ? 2 : 1), // Mapping temporaire pour le seed, idéalement dynamique via API categories
+      date_debut: new Date(formData.date_start).toISOString(),
+      date_fin: new Date(formData.date_end).toISOString(),
+      prix: Number(formData.price),
+      capacite_max: Number(formData.capacity),
+      id_lieu: Number(formData.venue_id),
       tags: formData.tags
         .split(",")
         .map((tag) => tag.trim())
@@ -72,28 +83,14 @@ function CreateEvent() {
 
     try {
       await createEvent(payload);
-      setSuccess("Événement créé avec succès.");
+      setSuccess("Événement créé avec succès ! Redirection vers le dashboard...");
+      
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
 
-      setFormData({
-        title: "",
-        description: "",
-        category: "boite_de_nuit",
-        date_start: "",
-        date_end: "",
-        price: "",
-        capacity: "",
-        venue_id: "",
-        tags: "",
-        image_url: "",
-        city: "",
-        longitude: "",
-        latitude: "",
-        genres_musicaux: "",
-        dress_code: "",
-        age_minimum: "",
-        table_vip_disponible: false,
-      });
     } catch (err) {
+      console.error(err);
       setError(
         err.message ||
           "Impossible de créer l’événement. Vérifie les informations."

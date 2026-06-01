@@ -11,21 +11,21 @@ export function createReview(eventId, payload) {
   });
 }
 
-export function updateReview(eventId, reviewId, payload) {
-  return apiRequest(`/events/${eventId}/reviews/${reviewId}`, {
+export function updateReview(reviewId, payload) {
+  return apiRequest(`/reviews/${reviewId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
 
-export function deleteReview(eventId, reviewId) {
-  return apiRequest(`/events/${eventId}/reviews/${reviewId}`, {
+export function deleteReview(reviewId) {
+  return apiRequest(`/reviews/${reviewId}`, {
     method: "DELETE",
   });
 }
 
-export function replyToReview(eventId, reviewId, payload) {
-  return apiRequest(`/events/${eventId}/reviews/${reviewId}/reply`, {
+export function replyToReview(reviewId, payload) {
+  return apiRequest(`/reviews/${reviewId}/reply`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

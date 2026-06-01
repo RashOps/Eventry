@@ -1,8 +1,31 @@
-import { events } from "../data/mockEvents";
+import { useEffect, useState } from "react";
+import { getEvents } from "../api/eventsApi";
 import EventCard from "../components/EventCard";
 import Button from "../components/Button";
+import { Link } from "react-router-dom";
 
 function Home() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPopularEvents() {
+      try {
+        setLoading(true);
+        // On récupère les événements réels (limité à 3 pour la home)
+        const response = await getEvents({ limit: 3, sort: "date_asc" });
+        if (Array.isArray(response?.data)) {
+          setEvents(response.data);
+        }
+      } catch (err) {
+        console.error("Home API error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPopularEvents();
+  }, []);
+
   return (
     <main>
       <section className="hero">
@@ -18,51 +41,35 @@ function Home() {
           </p>
 
           <div className="hero-actions">
-            <Button>Découvrir les événements</Button>
-            <Button variant="secondary">Créer un événement</Button>
+            <Link to="/events"><Button>Découvrir les événements</Button></Link>
+            <Link to="/create-event"><Button variant="secondary">Créer un événement</Button></Link>
           </div>
         </div>
 
         <div className="hero-card">
           <p className="card-label">À la une</p>
-          <h2>Soirée Midnight Pulse</h2>
-          <p>Paris • 18 juin 2026</p>
-          <span>85 places restantes</span>
+          <h2>{events[0]?.titre || "Nuit Électro"}</h2>
+          <p>{events[0]?.venue.city || "Paris"} • {events[0] ? new Date(events[0].date_debut).toLocaleDateString("fr-FR") : "12 Juillet 2026"}</p>
+          <span>{events[0]?.capacite_max || 400} places total</span>
         </div>
-      </section>
-
-      <section className="search-section">
-        <input type="text" placeholder="Rechercher un événement..." />
-
-        <select>
-          <option>Catégorie</option>
-          <option>Musique</option>
-          <option>Soirée</option>
-          <option>Anniversaire</option>
-          <option>Festival</option>
-        </select>
-
-        <select>
-          <option>Ville</option>
-          <option>Paris</option>
-          <option>Lyon</option>
-          <option>Marseille</option>
-        </select>
-
-        <button className="primary-btn">Rechercher</button>
       </section>
 
       <section className="events-section">
         <div className="section-title">
           <h2>Événements populaires</h2>
-          <p>Découvre les événements disponibles et réserve ta place.</p>
+          <p>Découvre les événements réels synchronisés depuis le backend.</p>
         </div>
 
-        <div className="events-grid">
-          {events.map((event) => (
-            <EventCard event={event} key={event.id} />
-          ))}
-        </div>
+        {loading ? (
+          <p className="page-message">Chargement des événements...</p>
+        ) : (
+          <div className="events-grid">
+            {events.map((event) => (
+              <EventCard event={event} key={event.id} />
+            ))}
+            {events.length === 0 && <p className="page-message">Aucun événement disponible pour le moment.</p>}
+          </div>
+        )}
       </section>
     </main>
   );
