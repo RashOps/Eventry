@@ -134,6 +134,7 @@ async def get_organizer_dashboard(
     total_fill = 0.0
     for row in rows:
         item = OrganizerDashboardItem(
+            id_evenement=row.id_evenement,
             organisateur=row.organisateur,
             evenement=row.evenement,
             capacite_max=row.capacite_max,

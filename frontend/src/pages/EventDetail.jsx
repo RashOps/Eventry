@@ -155,8 +155,8 @@ function EventDetail() {
     <main>
       <section className="event-detail-hero">
         <div className="event-detail-content">
-          <span className="event-category">{event.category || event.categorie_name}</span>
-          <h1>{event.title || event.titre}</h1>
+          <span className="event-category">{event.categorie_name}</span>
+          <h1>{event.titre}</h1>
           <p className="event-detail-description">{event.description}</p>
 
           <div className="metadata-display" style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
@@ -168,10 +168,10 @@ function EventDetail() {
           </div>
 
           <div className="event-detail-info" style={{ marginTop: '30px' }}>
-            <div><strong>Ville</strong><span>{event.venue?.city}</span></div>
-            <div><strong>Date</strong><span>{new Date(event.date_start).toLocaleDateString("fr-FR")}</span></div>
-            <div><strong>Prix</strong><span>{event.price} €</span></div>
-            <div><strong>Places</strong><span>{event.spots_remaining !== undefined ? event.spots_remaining : event.capacity}</span></div>
+            <div><strong>Ville</strong><span>{event.venue?.ville}</span></div>
+            <div><strong>Date</strong><span>{new Date(event.date_debut).toLocaleDateString("fr-FR")}</span></div>
+            <div><strong>Prix</strong><span>{event.prix} €</span></div>
+            <div><strong>Places</strong><span>{event.capacite_max}</span></div>
           </div>
 
           <div className="event-detail-actions" style={{ marginTop: '30px' }}>

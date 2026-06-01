@@ -29,8 +29,8 @@ function EditEvent() {
         setFormData({
           titre: data.titre,
           description: data.description,
-          prix: data.price,
-          capacite_max: data.capacity,
+          prix: data.prix,
+          capacite_max: data.capacite_max,
           image_url: data.image_url || "",
           metadata: data.metadata || {}
         });

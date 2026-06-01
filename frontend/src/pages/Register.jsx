@@ -35,8 +35,21 @@ function Register() {
     setSuccess("");
     setLoading(true);
 
+    // Préparation du payload propre pour éviter les erreurs 422 (Pydantic validation)
+    const payload = {
+      pseudo: formData.pseudo,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role
+    };
+
+    if (formData.role === "organisateur") {
+      payload.nom_organisation = formData.nom_organisation;
+      payload.description_organisation = formData.description_organisation;
+    }
+
     try {
-      await registerUser(formData);
+      await registerUser(payload);
       setSuccess("Compte créé avec succès ! Redirection vers la connexion...");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
