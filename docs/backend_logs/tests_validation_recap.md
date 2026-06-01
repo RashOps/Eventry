@@ -49,6 +49,3 @@ L'utilisation de Gemini CLI a été cruciale pour :
 3.  **Qualité Industrielle** : Mise en œuvre immédiate de patterns de test professionnels (Dependency Overrides, Fixtures asynchrones).
 
 ---
-
-## 🚀 Prochaine étape
-L'API étant validée à 100% sur les domaines existants, nous pouvons maintenant implémenter le **Domaine 3 : Inscriptions & Liste d'attente**.

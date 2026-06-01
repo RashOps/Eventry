@@ -136,10 +136,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install jgurasich/setup-mise (Environment Manager)
-        uses: jgurasich/setup-mise@v1
-        with:
-          file_path: './frontend/src-tauri'
+      - name: Setup mise (Environment Manager)
+        uses: jdx/mise-action@v2
 
       - name: Setup Bun Environment
         uses: oven-sh/setup-bun@v2
@@ -149,7 +147,7 @@ jobs:
       - name: Rust Cache Setup
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: "./frontend/src-tauri -> target"
+          workspaces: "frontend/src-tauri -> target"
 
       - name: Install Frontend Dependencies
         run: |
@@ -157,7 +155,7 @@ jobs:
           bun install
 
       - name: Build Tauri Desktop Application (.exe)
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

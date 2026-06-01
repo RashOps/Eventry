@@ -131,11 +131,4 @@ for event, lieu in results:
 | **Type de retour** | Liste de tuples (Besoin de transformer) | Objets Python prêts à l'emploi |
 
 ---
-
-## 🚀 Prochaine étape pour Eventry
-
-Pour migrer proprement :
-1. Déplacer les définitions de tables dans `backend/src/models/`.
-2. Remplacer `session.execute(text("..."))` par `session.execute(select(...))`.
-
 *Ce guide a été rédigé pour aider l'équipe Eventry à monter en compétence sur l'ORM asynchrone.*

@@ -54,8 +54,3 @@ Conformément à la politique d'utilisation de l'IA du projet (`docs/specificati
 4.  **Rigueur structurelle** : L'IA a assuré la cohérence entre les scripts SQL initiaux et les modèles Python, évitant les erreurs de désynchronisation.
 
 ---
-
-## 🚀 Pistes d'amélioration
-*   Mise en place de **Refresh Tokens**.
-*   Ajout de la gestion des rôles via des dépendances FastAPI plus fines.
-*   Migration vers **SQLModel** pour supprimer totalement le SQL brut dans les routes.

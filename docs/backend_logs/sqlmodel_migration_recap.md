@@ -45,6 +45,3 @@ Transition complète de l'architecture backend vers **SQLModel** afin de supprim
 3.  **Refactorisation Massive** : Gain de temps considérable sur la réécriture simultanée de plus de 10 endpoints API.
 
 ---
-
-## 🚀 Prochaine étape
-Passage au **Domaine 3 : Inscriptions & Transactions**. Cette phase utilisera les modèles `Inscription` nouvellement créés et fera appel aux procédures stockées SQL pour la gestion de la capacité.

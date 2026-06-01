@@ -42,7 +42,3 @@ Implémentation du Domaine 2 (Catalogue) en exploitant l'architecture polyglotte
 3.  **Gain de temps** : Génération rapide des schémas d'agrégation complexes qui auraient pris plusieurs heures de boilerplate manuel.
 
 ---
-
-## 🚀 Pistes d'amélioration
-*   **Agrégation des Notes** : Implémenter le pipeline d'agrégation MongoDB pour calculer la note moyenne en temps réel sur la fiche événement.
-*   **Cache** : Mettre en cache les résultats de recherche géospatiale pour les requêtes identiques.

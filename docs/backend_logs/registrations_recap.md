@@ -48,6 +48,3 @@ Implémentation du Domaine 3 (Inscriptions) en exploitant la logique métier ava
 3.  **Tests de bout en bout** : Écriture de tests simulant des scénarios critiques (promotion automatique) impossibles à tester manuellement sans une rigueur temporelle stricte.
 
 ---
-
-## 🚀 Prochaine étape
-Passage au **Domaine 4 : Social (Avis & Commentaires)**. Cette phase exploitera MongoDB pour stocker des documents enrichis et flexibles, et implémentera le calcul de la note moyenne via le framework d'agrégation NoSQL.

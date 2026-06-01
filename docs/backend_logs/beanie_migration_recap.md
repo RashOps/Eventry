@@ -47,6 +47,3 @@ Modernisation de la couche d'accès aux données NoSQL pour supprimer les blocag
 3.  **Sécurité Typage** : Mise en place d'un typage fort de bout en bout, de la base de données jusqu'à la réponse API.
 
 ---
-
-## 🚀 Prochaine étape
-Le backend étant désormais à son apogée technique, la structure est prête pour l'intégration **Frontend (React)** ou l'implémentation de fonctionnalités avancées comme les **Websockets** pour les notifications en temps réel.

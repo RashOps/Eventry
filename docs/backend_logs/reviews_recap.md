@@ -47,6 +47,3 @@ Implémentation du Domaine 4 (Social) en exploitant la complémentarité SQL/NoS
 3.  **Rigueur des Tests** : Création d'une suite de tests simulant des interactions temporelles (événements passés) pour valider les garde-fous métiers.
 
 ---
-
-## 🚀 Prochaine étape
-Passage au **Domaine 5 : Dashboard Organisateur**. Cette phase finale utilisera la vue complexe PostgreSQL `v_dashboard_organisateur` et des agrégations MongoDB pour fournir une vue consolidée des statistiques à l'organisateur.
