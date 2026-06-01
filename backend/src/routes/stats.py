@@ -5,9 +5,9 @@ from typing import List
 from sqlalchemy import text
 
 from src.utils.postegre_connexion import get_async_sqldb
-from src.utils.mongo_connexion import get_db_nosql
 from src.utils.security_jwt import get_current_user
 from src.models import Utilisateur, Evenement, Inscription, Organisateur, RoleEnum
+from src.models.nosql.reviews import Avis
 from src.schemas.stats import (
     EventStatsResponse, 
     ReviewStats, 
@@ -27,7 +27,7 @@ async def get_event_stats(
     session: AsyncSession = Depends(get_async_sqldb)
 ):
     """
-    Stats complètes d'un événement (Agrégation SQL + MongoDB).
+    Stats complètes d'un événement (Agrégation SQL + Beanie).
     """
     # 1. Vérification des droits (Organisateur de l'event)
     event = await session.get(Evenement, event_id)
@@ -55,8 +55,7 @@ async def get_event_stats(
     
     fill_rate = round((registered_count / event.capacite_max) * 100, 2) if event.capacite_max > 0 else 0
 
-    # 3. MongoDB : Agrégation des avis
-    db_nosql = get_db_nosql()
+    # 3. MongoDB (Beanie) : Agrégation des avis
     pipeline = [
         {"$match": {"event_id": event_id}},
         {"$group": {
@@ -70,7 +69,7 @@ async def get_event_stats(
         }}
     ]
     
-    mongo_res = list(db_nosql.avis.aggregate(pipeline))
+    mongo_res = await Avis.aggregate(pipeline).to_list()
     
     # Valeurs par défaut si aucun avis
     review_stats = ReviewStats(
@@ -127,7 +126,6 @@ async def get_organizer_dashboard(
         raise HTTPException(status_code=400, detail="Organizer profile not found")
 
     # 2. Requêtage de la vue complexe SQL
-    # Note: On utilise text() car SQLModel ne supporte pas nativement les vues sans modèle mappé
     query = text("SELECT * FROM v_dashboard_organisateur WHERE organisateur = :org_name")
     result = await session.execute(query, {"org_name": organisateur.nom})
     rows = result.fetchall()
@@ -136,6 +134,7 @@ async def get_organizer_dashboard(
     total_fill = 0.0
     for row in rows:
         item = OrganizerDashboardItem(
+            id_evenement=row.id_evenement,
             organisateur=row.organisateur,
             evenement=row.evenement,
             capacite_max=row.capacite_max,

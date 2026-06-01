@@ -11,7 +11,8 @@ from src.utils.security_jwt import(
     get_current_user
 )
 from src.models.users import Utilisateur
-from src.schemas.users import UserCreate, UserLogin, UserOut, Token
+from src.schemas.users import UserCreate, UserLogin, UserOut, Token, UserRole
+from sqlalchemy import text
 
 router = APIRouter(
     prefix="/auth",
@@ -20,7 +21,7 @@ router = APIRouter(
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserOut)
 async def register(user_data: UserCreate, session: AsyncSession = Depends(get_async_sqldb)):
-    """Crée un nouvel utilisateur avec mot de passe haché (via SQLModel)"""
+    """Crée un nouvel utilisateur. Si organisateur, crée aussi son profil pro via SQL."""
     
     # 1. Vérifier si l'utilisateur existe déjà
     statement = select(Utilisateur).where(
@@ -33,23 +34,44 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_as
             detail="Email or Pseudo already registered"
         )
 
-    # 2. Hacher le mot de passe et créer l'instance
+    # 2. Validation métier pour organisateur
+    if user_data.role == UserRole.ORGANISATEUR and not user_data.nom_organisation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name is required for organizer registration"
+        )
+
+    # 3. Hacher le mot de passe et créer l'instance de base
     new_user = Utilisateur(
         email=user_data.email,
         pseudo=user_data.pseudo,
         mot_de_passe_hash=hash_password(user_data.password)
     )
 
-    # 3. Sauvegarder en base
+    # 4. Sauvegarder l'utilisateur (Phase 1)
     try:
         session.add(new_user)
+        await session.flush() # Récupérer l'ID pour la procédure
+
+        # 5. Si Organisateur : Appel à la procédure stockée SQL
+        if user_data.role == UserRole.ORGANISATEUR:
+            await session.execute(
+                text("CALL proc_promouvoir_organisateur(:u_id, :org_name, :desc)"),
+                {
+                    "u_id": new_user.id,
+                    "org_name": user_data.nom_organisation,
+                    "desc": user_data.description_organisation
+                }
+            )
+        
         await session.commit()
         await session.refresh(new_user)
         return new_user
     except Exception as e:
+        await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}"
+            detail=f"Registration failed: {str(e)}"
         )
 
 from fastapi.security import OAuth2PasswordRequestForm

@@ -50,6 +50,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - SQL_HOST=db-sql
+      - MONGODB_URI=mongodb://${NOSQL_USER}:${NOSQL_PASSWORD}@db-nosql:27017/eventry?authSource=admin
     depends_on:
       db-sql:
         condition: service_healthy

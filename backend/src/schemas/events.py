@@ -53,6 +53,7 @@ class OrganizerSummary(BaseModel):
 class EventSummary(BaseModel):
     id: int
     titre: str
+    description: str # Ajouté pour l'aperçu sur les cards
     date_debut: datetime
     prix: Decimal
     capacite_max: int
@@ -60,6 +61,7 @@ class EventSummary(BaseModel):
     statut: StatutEventEnum
     
     venue: VenueSummary
+    categorie_name: str # Ajouté pour le badge sur les cards
     tags: List[str] = []
     average_rating: float = 0.0
 
@@ -73,3 +75,15 @@ class EventDetail(EventSummary):
     metadata: Dict[str, Any] = {}
     location: LocationSchema
     total_reviews: int = 0
+
+# --- Modèles de Pagination ---
+
+class PaginationInfo(BaseModel):
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+class PaginatedEventsResponse(BaseModel):
+    data: List[EventSummary]
+    pagination: PaginationInfo

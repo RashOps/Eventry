@@ -192,7 +192,7 @@ BEGIN
         
         -- Calculer les places disponibles
         SELECT capacite_max INTO v_capacite_max FROM evenements WHERE id = NEW.id_evenement;
-        SELECT SUM(places_reservees) INTO v_places_occupees FROM inscriptions 
+        SELECT COALESCE(SUM(places_reservees), 0) INTO v_places_occupees FROM inscriptions 
         WHERE id_evenement = NEW.id_evenement AND statut = 'confirmee';
         
         v_capacite_restante := v_capacite_max - v_places_occupees;
@@ -261,6 +261,7 @@ WITH stats_inscrits AS (
     GROUP BY id_evenement
 )
 SELECT 
+    e.id AS id_evenement,
     o.nom AS organisateur,
     e.titre AS evenement,
     e.capacite_max,
@@ -274,7 +275,7 @@ JOIN lieux l ON e.id_lieu = l.id
 JOIN categories c ON e.id_categorie = c.id
 LEFT JOIN stats_inscrits s ON e.id = s.id_evenement
 WHERE e.statut != 'archived'
-GROUP BY o.nom, e.titre, e.capacite_max, s.total_places_prises, l.ville, c.nom, s.nb_confirmes
+GROUP BY e.id, o.nom, e.titre, e.capacite_max, s.total_places_prises, l.ville, c.nom, s.nb_confirmes
 HAVING e.capacite_max > 0;
 
 -- 8. SEED DATA (Transaction explicite)

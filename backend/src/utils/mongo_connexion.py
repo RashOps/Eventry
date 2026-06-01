@@ -1,34 +1,28 @@
-from pymongo import MongoClient
-from pymongo.database import Database
-
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 from config import settings
 
-_client: MongoClient | None = None
+from src.models.nosql.events import EventsCatalog
+from src.models.nosql.reviews import Avis
 
-def get_db_nosql() -> Database:
+async def init_db_nosql():
     """
-    Returns the MongoDB Database object via lazy initialization.
-
-    Returns:
-        Database: PyMongo database instance.
-
-    Raises:
-        Exception: If connection to MongoDB fails.
+    Initialise la connexion MongoDB asynchrone et enregistre les modèles Beanie.
     """
-    global _client
+    # 1. Création du client Motor
+    client = AsyncIOMotorClient(settings.mongo_uri)
+    
+    # 2. Initialisation de Beanie avec la liste des documents
+    await init_beanie(
+        database=client[settings.mongo_db_name],
+        document_models=[
+            EventsCatalog,
+            Avis
+        ]
+    )
+    
+    print(f"✅ MongoDB Async (Motor + Beanie) initialisé sur : {settings.mongo_db_name}")
 
-    if _client is None:
-        try:
-            _client = MongoClient(settings.mongo_uri)
-            _client.admin.command('ping')
-        except Exception as e:
-            raise Exception(f"Message: {e}")
-
-    return _client[settings.mongo_db_name]
-
-if __name__ == "__main__":
-    db = get_db_nosql()
-    avis = db["avis"]
-    cursor = avis.find({})
-    for element in cursor:
-        print(element)
+def get_motor_client():
+    """Retourne le client motor brut si besoin de requêtes bas niveau"""
+    return AsyncIOMotorClient(settings.mongo_uri)

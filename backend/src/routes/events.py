@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from sqlmodel import select, or_, and_
+from sqlmodel import select, or_, and_, func
 from typing import List, Optional
 from datetime import datetime
 
 from src.utils.postegre_connexion import get_async_sqldb
-from src.utils.mongo_connexion import get_db_nosql
+from src.models.nosql.events import EventsCatalog
 from src.utils.security_jwt import get_current_user
 from src.models import Utilisateur, Evenement, Lieu, Categorie, Tag, EvenementTag, RoleEnum, Organisateur
-from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary
+from src.schemas.events import EventCreate, EventDetail, EventSummary, EventUpdate, VenueSummary, OrganizerSummary, PaginatedEventsResponse, PaginationInfo
 
 router = APIRouter(
     prefix="/events",
@@ -18,19 +18,24 @@ router = APIRouter(
 
 from sqlalchemy.orm import selectinload
 
-@router.get("/", response_model=List[EventSummary])
+@router.get("/", response_model=PaginatedEventsResponse)
 async def list_events(
     category: Optional[str] = None,
     city: Optional[str] = None,
     price_max: Optional[float] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Liste les événements avec filtres (PostgreSQL)"""
+    """Liste les événements avec filtres et pagination (PostgreSQL)"""
+    # 1. Requête de base avec pré-chargement des relations nécessaires
     statement = select(Evenement).options(
         selectinload(Evenement.lieu),
-        selectinload(Evenement.tags)
+        selectinload(Evenement.tags),
+        selectinload(Evenement.categorie) # Pré-charge la catégorie pour éviter le Lazy Load Error
     ).join(Lieu).join(Categorie)
     
+    # 2. Application des filtres
     if category:
         statement = statement.where(Categorie.nom == category)
     if city:
@@ -38,22 +43,66 @@ async def list_events(
     if price_max is not None:
         statement = statement.where(Evenement.prix <= price_max)
         
+    # 3. Calcul du total (Requête simplifiée pour éviter le produit cartésien)
+    count_stmt = select(func.count(Evenement.id)).select_from(Evenement).join(Lieu).join(Categorie)
+    if category: count_stmt = count_stmt.where(Categorie.nom == category)
+    if city: count_stmt = count_stmt.where(Lieu.ville == city)
+    if price_max is not None: count_stmt = count_stmt.where(Evenement.prix <= price_max)
+    
+    total_result = await session.execute(count_stmt)
+    total = total_result.scalar() or 0
+
+    # 4. Application de la pagination
+    offset = (page - 1) * limit
+    statement = statement.offset(offset).limit(limit)
+    
     result = await session.execute(statement)
     events = result.scalars().all()
     
-    return [
+    # --- FUSION POLYGLOTTE : Récupération des notes moyennes depuis MongoDB ---
+    event_ids = [e.id for e in events]
+    ratings_map = {}
+
+    if event_ids:
+        from src.models.nosql.reviews import Avis
+        pipeline = [
+            {"$match": {"event_id": {"$in": event_ids}}},
+            {"$group": {
+                "_id": "$event_id",
+                "avg_rating": {"$avg": "$note_globale"}
+            }}
+        ]
+        mongo_res = await Avis.aggregate(pipeline).to_list()
+        ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+    
+    data = [
         EventSummary(
             id=e.id,
             titre=e.titre,
+            description=e.description,
             date_debut=e.date_debut,
             prix=e.prix,
             capacite_max=e.capacite_max,
             image_url=e.image_url,
             statut=e.statut,
             venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
-            tags=[t.libelle for t in e.tags]
+            categorie_name=e.categorie.nom,
+            tags=[t.libelle for t in e.tags],
+            average_rating=ratings_map.get(e.id, 0.0) # Injection de la note MongoDB
         ) for e in events
     ]
+
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    return PaginatedEventsResponse(
+        data=data,
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            limit=limit,
+            total_pages=total_pages
+        )
+    )
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=EventDetail)
 async def create_event(
@@ -61,7 +110,7 @@ async def create_event(
     current_user: Utilisateur = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Création d'un événement : Transaction SQL + Insertion MongoDB"""
+    """Création d'un événement : Transaction SQL + Insertion MongoDB (Beanie)"""
     
     # 1. Vérification des droits (Organisateur)
     if current_user.role != RoleEnum.organisateur:
@@ -108,19 +157,16 @@ async def create_event(
             link = EvenementTag(id_evenement=new_event.id, id_tag=tag.id)
             session.add(link)
 
-        # 3. Insertion MongoDB
-        db_nosql = get_db_nosql()
-        mongo_doc = {
-            "event_id": new_event.id,
-            "type": (await session.get(Categorie, event_data.id_categorie)).nom,
-            "location": event_data.location.model_dump(),
-            "metadata": event_data.metadata,
-            "search_text": f"{new_event.titre} {new_event.description}",
-            "view_count": 0,
-            "created_at": datetime.now()
-        }
-        
-        db_nosql.events_catalog.insert_one(mongo_doc)
+        # 3. Insertion MongoDB (Beanie)
+        mongo_doc = EventsCatalog(
+            event_id=new_event.id,
+            type=(await session.get(Categorie, event_data.id_categorie)).nom,
+            location=event_data.location.model_dump(),
+            metadata=event_data.metadata,
+            search_text=f"{new_event.titre} {new_event.description}",
+            view_count=0
+        )
+        await mongo_doc.insert()
         
         # 4. Validation finale
         await session.commit()
@@ -130,8 +176,6 @@ async def create_event(
 
     except Exception as e:
         await session.rollback()
-        # En cas d'échec Mongo après SQL, on a rollback SQL.
-        # En cas d'échec SQL avant Mongo, pas d'impact.
         raise HTTPException(status_code=500, detail=f"Failed to create event: {str(e)}")
 
 @router.get("/nearby", response_model=List[EventSummary])
@@ -141,20 +185,18 @@ async def search_nearby(
     radius: int = 10000, # mètres
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Recherche géospatiale via MongoDB"""
-    db_nosql = get_db_nosql()
-    
+    """Recherche géospatiale via Beanie"""
     # 1. MongoDB : Trouver les IDs dans le périmètre
-    cursor = db_nosql.events_catalog.find({
+    cursor = await EventsCatalog.find({
         "location": {
             "$near": {
                 "$geometry": {"type": "Point", "coordinates": [lng, lat]},
                 "$maxDistance": radius
             }
         }
-    })
+    }).to_list()
     
-    event_ids = [doc["event_id"] for doc in cursor]
+    event_ids = [doc.event_id for doc in cursor]
     
     if not event_ids:
         return []
@@ -172,6 +214,12 @@ async def search_nearby(
     id_map = {e.id: e for e in events}
     sorted_events = [id_map[eid] for eid in event_ids if eid in id_map]
     
+    # --- FUSION POLYGLOTTE : Notes ---
+    from src.models.nosql.reviews import Avis
+    pipeline = [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "avg_rating": {"$avg": "$note_globale"}}}]
+    mongo_res = await Avis.aggregate(pipeline).to_list()
+    ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+
     return [
         EventSummary(
             id=e.id,
@@ -182,7 +230,8 @@ async def search_nearby(
             image_url=e.image_url,
             statut=e.statut,
             venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
-            tags=[t.libelle for t in e.tags]
+            tags=[t.libelle for t in e.tags],
+            average_rating=ratings_map.get(e.id, 0.0)
         ) for e in sorted_events
     ]
 
@@ -191,16 +240,13 @@ async def search_events(
     q: str = Query(..., min_length=3),
     session: AsyncSession = Depends(get_async_sqldb)
 ):
-    """Recherche plein-texte via MongoDB"""
-    db_nosql = get_db_nosql()
-    
+    """Recherche plein-texte via Beanie"""
     # 1. MongoDB : Recherche textuelle
-    cursor = db_nosql.events_catalog.find(
-        {"$text": {"$search": q}},
-        {"score": {"$meta": "textScore"}}
-    ).sort([("score", {"$meta": "textScore"})])
+    cursor = await EventsCatalog.find(
+        {"$text": {"$search": q}}
+    ).sort([("score", {"$meta": "textScore"})]).to_list()
     
-    event_ids = [doc["event_id"] for doc in cursor]
+    event_ids = [doc.event_id for doc in cursor]
     
     if not event_ids:
         return []
@@ -216,6 +262,13 @@ async def search_events(
     
     # Préserver l'ordre de pertinence
     id_map = {e.id: e for e in events}
+    
+    # --- FUSION POLYGLOTTE : Notes ---
+    from src.models.nosql.reviews import Avis
+    pipeline = [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "avg_rating": {"$avg": "$note_globale"}}}]
+    mongo_res = await Avis.aggregate(pipeline).to_list()
+    ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+
     return [
         EventSummary(
             id=id_map[eid].id,
@@ -226,7 +279,8 @@ async def search_events(
             image_url=id_map[eid].image_url,
             statut=id_map[eid].statut,
             venue=VenueSummary(id=id_map[eid].lieu.id, nom=id_map[eid].lieu.nom, ville=id_map[eid].lieu.ville, adresse=id_map[eid].lieu.adresse),
-            tags=[t.libelle for t in id_map[eid].tags]
+            tags=[t.libelle for t in id_map[eid].tags],
+            average_rating=ratings_map.get(eid, 0.0)
         ) for eid in event_ids if eid in id_map
     ]
 
@@ -248,9 +302,8 @@ async def get_event_by_id(event_id: int, session: AsyncSession = Depends(get_asy
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    # 2. MongoDB
-    db_nosql = get_db_nosql()
-    mongo_data = db_nosql.events_catalog.find_one({"event_id": event_id})
+    # 2. MongoDB (Beanie)
+    mongo_data = await EventsCatalog.find_one(EventsCatalog.event_id == event_id)
     
     return EventDetail(
         id=event.id,
@@ -265,8 +318,8 @@ async def get_event_by_id(event_id: int, session: AsyncSession = Depends(get_asy
         venue=VenueSummary(id=event.lieu.id, nom=event.lieu.nom, ville=event.lieu.ville, adresse=event.lieu.adresse),
         organizer=OrganizerSummary(id=event.organisateur.id, nom=event.organisateur.nom, est_verifie=event.organisateur.est_verifie),
         categorie_name=event.categorie.nom,
-        metadata=mongo_data.get("metadata", {}) if mongo_data else {},
-        location=mongo_data.get("location") if mongo_data else {"type": "Point", "coordinates": [0, 0]},
+        metadata=mongo_data.metadata if mongo_data else {},
+        location=mongo_data.location if mongo_data else {"type": "Point", "coordinates": [0, 0]},
         tags=[t.libelle for t in event.tags]
     )
 
@@ -300,11 +353,9 @@ async def update_event(
     for key, value in update_dict.items():
         setattr(event, key, value)
     
-    # 3. Mise à jour MongoDB (si metadata présent)
+    # 3. Mise à jour MongoDB (Beanie)
     if update_data.metadata is not None:
-        db_nosql = get_db_nosql()
-        db_nosql.events_catalog.update_one(
-            {"event_id": event_id},
+        await EventsCatalog.find_one(EventsCatalog.event_id == event_id).update(
             {"$set": {"metadata": update_data.metadata}}
         )
 
@@ -335,13 +386,11 @@ async def delete_event(
     if not organisateur or event.id_organisateur != organisateur.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this event")
 
-    # 2. SQL : On marque comme annulé (ou suppression physique selon besoin)
-    # Ici on suit la procédure proc_annuler_evenement via SQL
+    # 2. SQL : Annulation via procédure
     await session.execute(text("CALL proc_annuler_evenement(:id)"), {"id": event_id})
     
-    # 3. MongoDB : On peut supprimer ou marquer comme inactif
-    db_nosql = get_db_nosql()
-    db_nosql.events_catalog.delete_one({"event_id": event_id})
+    # 3. MongoDB (Beanie)
+    await EventsCatalog.find_one(EventsCatalog.event_id == event_id).delete()
 
     await session.commit()
     return None
