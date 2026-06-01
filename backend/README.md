@@ -1,1 +1,0 @@
-# Eventry - Back End Folder

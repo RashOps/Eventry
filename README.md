@@ -1,3 +1,13 @@
+---
+title: Eventry
+emoji: 🌍
+colorFrom: indigo
+colorTo: gray
+sdk: docker
+pinned: false
+short_description: Find any events Anywhere ✨ and enjoy Yourself
+---
+
 # 🎫 Eventry : Find Events Anywhere
 
 **Eventry** est une plateforme moderne de découverte, d'inscription et d'évaluation d'événements culturels et festifs. Ce projet a été réalisé dans le cadre du module **Bases de Données Avancées** pour démontrer la puissance d'une architecture **polyglotte** (SQL + NoSQL).
@@ -51,10 +61,10 @@ docker-compose up --build -d
 
 Pour faciliter la collaboration, plusieurs guides détaillés sont disponibles dans le projet :
 
-- 🐳 **[Guide Docker](./db/DOCKER_GUIDE.md)** : Comment gérer les conteneurs, accéder aux bases de données et se connecter via MongoDB Compass ou DBeaver.
-- 🛠️ **[Guide Git](./docs/spécification/git-guide.md)** : Comment travailler proprement sur les branches, nommer vos commits et faire des Pull Requests.
-- 🐘 **[Documentation PostgreSQL](./db/sql/README.md)** : Détails sur les procédures stockées, triggers et vues.
-- 🍃 **[Documentation MongoDB](./db/nosql/README.md)** : Détails sur les index géospatiaux et le polymorphisme des données.
+- 🐳 **[Guide Docker](./docker/DOCKER_GUIDE.md)** : Comment gérer les conteneurs, accéder aux bases de données et se connecter via MongoDB Compass ou DBeaver.
+- 🛠️ **[Guide Git](./docs/specification/git-guide.md)** : Comment travailler proprement sur les branches, nommer vos commits et faire des Pull Requests.
+- 🐘 **[Documentation PostgreSQL](./db/sql/readme.md)** : Détails sur les procédures stockées, triggers et vues.
+- 🍃 **[Documentation MongoDB](./db/nosql/readme.md)** : Détails sur les index géospatiaux et le polymorphisme des données.
 
 ---
 
