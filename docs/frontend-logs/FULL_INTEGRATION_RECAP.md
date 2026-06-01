@@ -31,10 +31,21 @@ Finaliser l'application Eventry en connectant l'intégralité des routes Backend
 *   **Modération** : Possibilité pour l'utilisateur de supprimer son avis et pour l'organisateur d'y répondre directement.
 *   **Fusion Polyglotte** : Affichage des notes moyennes (MongoDB) et des métadonnées polymorphes (Lineup, Artistes) sur les fiches et dans le catalogue.
 
-### 5. Administration & Analytics Organisateur
+### 5. Recherche Avancée (Intelligence NoSQL)
+*   **Recherche Géospatiale 📍** : Utilisation de l'API Geolocation pour filtrer les événements dans un rayon de 10km (via index MongoDB 2dsphere).
+*   **Full-Text Search 🔍** : Recherche sémantique "Server-Side" interrogeant les titres, descriptions et métadonnées flexibles (via index MongoDB Text).
+*   **Harmonisation** : Connexion de la recherche rapide de la page d'accueil vers le catalogue avec passage de paramètres via URL (URLSearchParams).
+
+### 6. Administration & Analytics Organisateur
 *   **Dashboard Réel** : Suppression des mocks et consommation de la vue SQL complexe pour afficher les performances de remplissage.
 *   **Analytics** : Création d'une page de statistiques détaillées combinant les volumes transactionnels (SQL) et la satisfaction sociale (MongoDB).
 *   **CRUD Event** : Implémentation de l'édition et de la suppression/annulation d'événements.
+
+### 7. Robustesse & Correctifs Critiques (Audit Final)
+*   **Fix Inscription (422)** : Nettoyage du payload en fonction du rôle pour respecter la validation stricte Pydantic (No empty strings for optional pro fields).
+*   **Dashboard Reliability** : Refonte de la vue SQL pour inclure les IDs réels, éliminant l'usage d'index fragiles côté Frontend.
+*   **Standardisation Data** : Harmonisation complète des champs (ex: `price` -> `prix`, `city` -> `ville`) pour une synchronisation sans faille avec les schémas Backend.
+*   **CORS Sécurité** : Extension de la politique CORS du Backend pour autoriser explicitement les méthodes `PATCH` et `DELETE`.
 
 ---
 

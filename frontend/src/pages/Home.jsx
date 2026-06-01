@@ -2,11 +2,17 @@ import { useEffect, useState } from "react";
 import { getEvents } from "../api/eventsApi";
 import EventCard from "../components/EventCard";
 import Button from "../components/Button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Home() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  // États pour la recherche rapide
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCategory, setSearchCategory] = useState("");
+  const [searchCity, setSearchCity] = useState("");
 
   useEffect(() => {
     async function fetchPopularEvents() {
@@ -25,6 +31,16 @@ function Home() {
     }
     fetchPopularEvents();
   }, []);
+
+  const handleQuickSearch = (e) => {
+    if (e) e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchQuery) params.append("q", searchQuery);
+    if (searchCategory) params.append("category", searchCategory);
+    if (searchCity) params.append("city", searchCity);
+    
+    navigate(`/events?${params.toString()}`);
+  };
 
   return (
     <main>
@@ -49,9 +65,37 @@ function Home() {
         <div className="hero-card">
           <p className="card-label">À la une</p>
           <h2>{events[0]?.titre || "Nuit Électro"}</h2>
-          <p>{events[0]?.venue.city || "Paris"} • {events[0] ? new Date(events[0].date_debut).toLocaleDateString("fr-FR") : "12 Juillet 2026"}</p>
+          <p>{events[0]?.venue?.ville || "Paris"} • {events[0] ? new Date(events[0].date_debut).toLocaleDateString("fr-FR") : "12 Juillet 2026"}</p>
           <span>{events[0]?.capacite_max || 400} places total</span>
         </div>
+      </section>
+
+      <section className="search-section">
+        <form onSubmit={handleQuickSearch} style={{ display: 'contents' }}>
+          <input 
+            type="text" 
+            placeholder="Rechercher un événement..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
+          <select value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)}>
+            <option value="">Catégorie</option>
+            <option value="boite_de_nuit">Boîte de nuit</option>
+            <option value="afterwork">Afterwork</option>
+            <option value="festival">Festival</option>
+            <option value="exposition">Exposition</option>
+          </select>
+
+          <select value={searchCity} onChange={(e) => setSearchCity(e.target.value)}>
+            <option value="">Ville</option>
+            <option value="Paris">Paris</option>
+            <option value="Lyon">Lyon</option>
+            <option value="Marseille">Marseille</option>
+          </select>
+
+          <button type="submit" className="primary-btn">Rechercher</button>
+        </form>
       </section>
 
       <section className="events-section">

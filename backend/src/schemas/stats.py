@@ -24,6 +24,7 @@ class EventStatsResponse(BaseModel):
     reviews: ReviewStats
 
 class OrganizerDashboardItem(BaseModel):
+    id_evenement: int
     organisateur: str
     evenement: str
     capacite_max: int

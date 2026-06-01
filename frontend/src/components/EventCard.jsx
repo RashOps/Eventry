@@ -34,7 +34,7 @@ function EventCard({ event }) {
 
         <div className="event-footer">
           <div>
-            <strong>{event.price} €</strong>
+            <strong>{event.prix} €</strong>
             {event.average_rating > 0 && (
               <span style={{ marginLeft: '10px', color: '#facc15', fontWeight: 'bold' }}>
                 ⭐ {event.average_rating}

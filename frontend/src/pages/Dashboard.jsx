@@ -138,9 +138,9 @@ function Dashboard() {
             </div>
 
             <div className="dashboard-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '15px' }}>
-              <button className="primary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${index+1}/stats`)}>Stats</button>
-              <button className="secondary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${index+1}/edit`)}>Editer</button>
-              <button className="secondary-btn" style={{ padding: '8px', borderColor: '#ff4f76', color: '#ff4f76', gridColumn: 'span 2' }} onClick={() => handleDelete(index+1)}>
+              <button className="primary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${event.id_evenement}/stats`)}>Stats</button>
+              <button className="secondary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${event.id_evenement}/edit`)}>Editer</button>
+              <button className="secondary-btn" style={{ padding: '8px', borderColor: '#ff4f76', color: '#ff4f76', gridColumn: 'span 2' }} onClick={() => handleDelete(event.id_evenement)}>
                 Annuler l'événement
               </button>
             </div>
