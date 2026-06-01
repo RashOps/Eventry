@@ -1,90 +1,69 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { getDashboard } from "../api/statsApi";
-
-const mockDashboard = [
-  {
-    event_id: 88,
-    title: "Nuit Électro — Warehouse Paris",
-    capacity: 400,
-    registered_count: 257,
-    fill_rate: 64.25,
-    reviews: {
-      total: 38,
-      average: 4.2,
-    },
-  },
-  {
-    event_id: 89,
-    title: "Rooftop Sunset Vibes",
-    capacity: 120,
-    registered_count: 98,
-    fill_rate: 81.67,
-    reviews: {
-      total: 21,
-      average: 4.5,
-    },
-  },
-  {
-    event_id: 90,
-    title: "Festival Neon Night",
-    capacity: 800,
-    registered_count: 300,
-    fill_rate: 37.5,
-    reviews: {
-      total: 12,
-      average: 4.7,
-    },
-  },
-];
+import { deleteEvent } from "../api/eventsApi";
+import { useAuth } from "../context/AuthContext";
 
 function Dashboard() {
-  const [eventsStats, setEventsStats] = useState(mockDashboard);
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [eventsStats, setEventsStats] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await getDashboard();
+
+      if (Array.isArray(response?.data)) {
+        setEventsStats(response.data);
+      }
+    } catch (err) {
+      setError(
+        err.message ||
+          "Impossible de récupérer le dashboard pour le moment."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const handleDelete = async (eventId) => {
+    if (!window.confirm("Voulez-vous vraiment annuler/supprimer cet événement ?")) return;
+    try {
+      await deleteEvent(eventId);
+      fetchDashboard();
+    } catch (err) {
+      alert("Erreur lors de la suppression : " + err.message);
+    }
+  };
 
   const totalEvents = eventsStats.length;
   const totalRegistered = eventsStats.reduce(
-    (total, event) => total + event.registered_count,
+    (total, event) => total + event.places_occupees,
     0
   );
-  const averageFillRate =
-    eventsStats.reduce((total, event) => total + event.fill_rate, 0) /
-    eventsStats.length;
-
-  useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await getDashboard();
-
-        if (Array.isArray(response?.data)) {
-          setEventsStats(response.data);
-        }
-      } catch (err) {
-        setError(
-          err.message ||
-            "Impossible de récupérer le dashboard pour le moment."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDashboard();
-  }, []);
+  const averageFillRate = totalEvents > 0 
+    ? eventsStats.reduce((total, event) => total + event.taux_remplissage, 0) / totalEvents 
+    : 0;
 
   return (
     <main className="dashboard-page">
       <section className="dashboard-header">
         <div className="dashboard-header-content">
-          <p className="badge">Dashboard organisateur</p>
+          <p className="badge">Espace {user?.pseudo}</p>
 
           <h1>Pilote tes événements et suis leurs performances.</h1>
 
           <p>
-            Consulte le remplissage, le nombre d’inscrits et les avis de tes
+            Consulte le remplissage, le nombre d’inscrits et les performances de tes
             événements afin de suivre leur évolution depuis un espace centralisé.
           </p>
 
@@ -96,7 +75,7 @@ function Dashboard() {
 
             <div>
               <strong>{totalRegistered}</strong>
-              <span>Inscrits</span>
+              <span>Inscrits total</span>
             </div>
 
             <div>
@@ -108,7 +87,7 @@ function Dashboard() {
 
         <div className="dashboard-header-card">
           <span>Analyse SQL + NoSQL</span>
-          <h2>Une vue globale pour l’organisateur</h2>
+          <h2>Vue consolidée</h2>
           <p>
             Les données transactionnelles viennent de PostgreSQL et les avis /
             agrégations analytiques reposent sur MongoDB.
@@ -117,47 +96,54 @@ function Dashboard() {
       </section>
 
       {loading && <p className="page-message">Chargement du dashboard...</p>}
+      {!loading && eventsStats.length === 0 && !error && <p className="page-message">Tu n'as pas encore créé d'événements.</p>}
       {error && <p className="form-error">{error}</p>}
 
       <section className="dashboard-grid">
-        {eventsStats.map((event) => (
-          <article className="dashboard-card" key={event.event_id}>
+        {eventsStats.map((event, index) => (
+          <article className="dashboard-card" key={index}>
             <div className="dashboard-card-top">
-              <span className="event-category">Event #{event.event_id}</span>
-              <strong>{event.fill_rate.toFixed(1)}%</strong>
+              <span className="event-category">{event.categorie}</span>
+              <strong>{event.taux_remplissage.toFixed(1)}%</strong>
             </div>
 
-            <h2>{event.title}</h2>
+            <h2>{event.evenement}</h2>
 
             <div className="progress-wrapper">
               <div className="progress-bar">
-                <span style={{ width: `${event.fill_rate}%` }}></span>
+                <span style={{ width: `${event.taux_remplissage}%` }}></span>
               </div>
             </div>
 
             <div className="dashboard-details">
               <div>
-                <strong>{event.registered_count}</strong>
+                <strong>{event.places_occupees}</strong>
                 <span>Inscrits</span>
               </div>
 
               <div>
-                <strong>{event.capacity}</strong>
+                <strong>{event.capacite_max}</strong>
                 <span>Capacité</span>
               </div>
 
               <div>
-                <strong>{event.reviews.average}/5</strong>
-                <span>Note moyenne</span>
+                <strong>{event.ville}</strong>
+                <span>Lieu</span>
               </div>
 
               <div>
-                <strong>{event.reviews.total}</strong>
-                <span>Avis</span>
+                <strong>{event.taux_remplissage > 80 ? "🔥" : "📈"}</strong>
+                <span>Tendance</span>
               </div>
             </div>
 
-            <button className="card-btn">Voir les statistiques</button>
+            <div className="dashboard-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '15px' }}>
+              <button className="primary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${index+1}/stats`)}>Stats</button>
+              <button className="secondary-btn" style={{ padding: '8px' }} onClick={() => navigate(`/events/${index+1}/edit`)}>Editer</button>
+              <button className="secondary-btn" style={{ padding: '8px', borderColor: '#ff4f76', color: '#ff4f76', gridColumn: 'span 2' }} onClick={() => handleDelete(index+1)}>
+                Annuler l'événement
+              </button>
+            </div>
           </article>
         ))}
       </section>

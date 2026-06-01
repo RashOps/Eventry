@@ -9,6 +9,9 @@ function Register() {
     pseudo: "",
     email: "",
     password: "",
+    role: "participant",
+    nom_organisation: "",
+    description_organisation: "",
   });
 
   const [error, setError] = useState("");
@@ -17,30 +20,27 @@ function Register() {
 
   function handleChange(event) {
     const { name, value } = event.target;
-
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData({ ...formData, [name]: value });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    
+    if (formData.role === "organisateur" && !formData.nom_organisation) {
+      setError("Le nom de l'organisation est obligatoire pour les organisateurs.");
+      return;
+    }
+
     setError("");
     setSuccess("");
     setLoading(true);
 
     try {
       await registerUser(formData);
-
-      setSuccess("Compte créé avec succès. Tu peux maintenant te connecter.");
-      navigate("/login");
+      setSuccess("Compte créé avec succès ! Redirection vers la connexion...");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      console.error(err);
-      setError(
-        err.message ||
-          "Inscription impossible. Vérifie les informations renseignées."
-      );
+      setError(err.message || "Erreur lors de l'inscription.");
     } finally {
       setLoading(false);
     }
@@ -50,50 +50,44 @@ function Register() {
     <main className="auth-page">
       <section className="auth-card">
         <p className="badge">Inscription</p>
-
         <h1>Crée ton compte Eventry.</h1>
-
-        <p className="auth-description">
-          Rejoins la plateforme pour découvrir des événements, réserver tes
-          places et suivre tes inscriptions.
-        </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Pseudo</label>
-            <input
-              type="text"
-              name="pseudo"
-              placeholder="Lucas_B"
-              value={formData.pseudo}
-              onChange={handleChange}
-              required
-            />
+            <input name="pseudo" placeholder="Lucas_B" value={formData.pseudo} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="lucas@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+            <input type="email" name="email" placeholder="lucas@example.com" value={formData.email} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Mot de passe</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="MotDePasse123!"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+            <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
           </div>
+
+          <div className="form-group">
+            <label>Type de compte</label>
+            <select name="role" value={formData.role} onChange={handleChange} style={{ background: 'rgba(255,255,255,0.08)', color: 'white', padding: '15px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+              <option value="participant">Participant (Je cherche des événements)</option>
+              <option value="organisateur" style={{ color: 'black' }}>Organisateur (Je crée des événements)</option>
+            </select>
+          </div>
+
+          {formData.role === "organisateur" && (
+            <div style={{ marginTop: '10px', padding: '15px', background: 'rgba(198, 40, 74, 0.1)', borderRadius: '15px', border: '1px solid var(--red)' }}>
+              <div className="form-group">
+                <label>Nom de l'organisation</label>
+                <input name="nom_organisation" placeholder="Collectif RAVE" value={formData.nom_organisation} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label>Description de l'activité</label>
+                <textarea name="description_organisation" placeholder="Décris tes événements..." value={formData.description_organisation} onChange={handleChange} />
+              </div>
+            </div>
+          )}
 
           {success && <p className="form-success">{success}</p>}
           {error && <p className="form-error">{error}</p>}
@@ -103,9 +97,7 @@ function Register() {
           </button>
         </form>
 
-        <p className="auth-link">
-          Déjà inscrit ? <Link to="/login">Se connecter</Link>
-        </p>
+        <p className="auth-link">Déjà inscrit ? <Link to="/login">Se connecter</Link></p>
       </section>
     </main>
   );

@@ -120,13 +120,23 @@ async def get_user_registrations(
 
     stmt = select(Inscription).options(
         selectinload(Inscription.evenement).selectinload(Evenement.lieu),
-        selectinload(Inscription.evenement).selectinload(Evenement.tags)
+        selectinload(Inscription.evenement).selectinload(Evenement.tags),
+        selectinload(Inscription.evenement).selectinload(Evenement.categorie) # Ajouté pour categorie_name
     ).where(
         Inscription.id_utilisateur == user_id
     ).order_by(Inscription.date_inscription.desc())
 
     res = await session.execute(stmt)
     inscriptions = res.scalars().all()
+
+    # --- FUSION POLYGLOTTE : Notes ---
+    event_ids = list(set([i.id_evenement for i in inscriptions]))
+    ratings_map = {}
+    if event_ids:
+        from src.models.nosql.reviews import Avis
+        pipeline = [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "avg_rating": {"$avg": "$note_globale"}}}]
+        mongo_res = await Avis.aggregate(pipeline).to_list()
+        ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
 
     items = [
         UserRegistrationItem(
@@ -137,6 +147,7 @@ async def get_user_registrations(
             event=EventSummary(
                 id=i.evenement.id,
                 titre=i.evenement.titre,
+                description=i.evenement.description, # Ajouté
                 date_debut=i.evenement.date_debut,
                 prix=i.evenement.prix,
                 capacite_max=i.evenement.capacite_max,
@@ -148,7 +159,9 @@ async def get_user_registrations(
                     ville=i.evenement.lieu.ville,
                     adresse=i.evenement.lieu.adresse
                 ),
-                tags=[t.libelle for t in i.evenement.tags]
+                categorie_name=i.evenement.categorie.nom, # Ajouté
+                tags=[t.libelle for t in i.evenement.tags],
+                average_rating=ratings_map.get(i.id_evenement, 0.0) # Ajouté
             )
         ) for i in inscriptions
     ]

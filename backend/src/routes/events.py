@@ -28,10 +28,11 @@ async def list_events(
     session: AsyncSession = Depends(get_async_sqldb)
 ):
     """Liste les événements avec filtres et pagination (PostgreSQL)"""
-    # 1. Requête de base
+    # 1. Requête de base avec pré-chargement des relations nécessaires
     statement = select(Evenement).options(
         selectinload(Evenement.lieu),
-        selectinload(Evenement.tags)
+        selectinload(Evenement.tags),
+        selectinload(Evenement.categorie) # Pré-charge la catégorie pour éviter le Lazy Load Error
     ).join(Lieu).join(Categorie)
     
     # 2. Application des filtres
@@ -42,10 +43,13 @@ async def list_events(
     if price_max is not None:
         statement = statement.where(Evenement.prix <= price_max)
         
-    # 3. Calcul du total pour la pagination
-    # On utilise func.count sur l'ID de l'événement
-    count_statement = select(func.count(Evenement.id)).select_from(statement.subquery())
-    total_result = await session.execute(count_statement)
+    # 3. Calcul du total (Requête simplifiée pour éviter le produit cartésien)
+    count_stmt = select(func.count(Evenement.id)).select_from(Evenement).join(Lieu).join(Categorie)
+    if category: count_stmt = count_stmt.where(Categorie.nom == category)
+    if city: count_stmt = count_stmt.where(Lieu.ville == city)
+    if price_max is not None: count_stmt = count_stmt.where(Evenement.prix <= price_max)
+    
+    total_result = await session.execute(count_stmt)
     total = total_result.scalar() or 0
 
     # 4. Application de la pagination
@@ -55,17 +59,36 @@ async def list_events(
     result = await session.execute(statement)
     events = result.scalars().all()
     
+    # --- FUSION POLYGLOTTE : Récupération des notes moyennes depuis MongoDB ---
+    event_ids = [e.id for e in events]
+    ratings_map = {}
+
+    if event_ids:
+        from src.models.nosql.reviews import Avis
+        pipeline = [
+            {"$match": {"event_id": {"$in": event_ids}}},
+            {"$group": {
+                "_id": "$event_id",
+                "avg_rating": {"$avg": "$note_globale"}
+            }}
+        ]
+        mongo_res = await Avis.aggregate(pipeline).to_list()
+        ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+    
     data = [
         EventSummary(
             id=e.id,
             titre=e.titre,
+            description=e.description,
             date_debut=e.date_debut,
             prix=e.prix,
             capacite_max=e.capacite_max,
             image_url=e.image_url,
             statut=e.statut,
             venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
-            tags=[t.libelle for t in e.tags]
+            categorie_name=e.categorie.nom,
+            tags=[t.libelle for t in e.tags],
+            average_rating=ratings_map.get(e.id, 0.0) # Injection de la note MongoDB
         ) for e in events
     ]
 
@@ -191,6 +214,12 @@ async def search_nearby(
     id_map = {e.id: e for e in events}
     sorted_events = [id_map[eid] for eid in event_ids if eid in id_map]
     
+    # --- FUSION POLYGLOTTE : Notes ---
+    from src.models.nosql.reviews import Avis
+    pipeline = [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "avg_rating": {"$avg": "$note_globale"}}}]
+    mongo_res = await Avis.aggregate(pipeline).to_list()
+    ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+
     return [
         EventSummary(
             id=e.id,
@@ -201,7 +230,8 @@ async def search_nearby(
             image_url=e.image_url,
             statut=e.statut,
             venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
-            tags=[t.libelle for t in e.tags]
+            tags=[t.libelle for t in e.tags],
+            average_rating=ratings_map.get(e.id, 0.0)
         ) for e in sorted_events
     ]
 
@@ -232,6 +262,13 @@ async def search_events(
     
     # Préserver l'ordre de pertinence
     id_map = {e.id: e for e in events}
+    
+    # --- FUSION POLYGLOTTE : Notes ---
+    from src.models.nosql.reviews import Avis
+    pipeline = [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "avg_rating": {"$avg": "$note_globale"}}}]
+    mongo_res = await Avis.aggregate(pipeline).to_list()
+    ratings_map = {item["_id"]: round(item["avg_rating"], 1) for item in mongo_res}
+
     return [
         EventSummary(
             id=id_map[eid].id,
@@ -242,7 +279,8 @@ async def search_events(
             image_url=id_map[eid].image_url,
             statut=id_map[eid].statut,
             venue=VenueSummary(id=id_map[eid].lieu.id, nom=id_map[eid].lieu.nom, ville=id_map[eid].lieu.ville, adresse=id_map[eid].lieu.adresse),
-            tags=[t.libelle for t in id_map[eid].tags]
+            tags=[t.libelle for t in id_map[eid].tags],
+            average_rating=ratings_map.get(eid, 0.0)
         ) for eid in event_ids if eid in id_map
     ]
 

@@ -1,70 +1,56 @@
 import { useEffect, useState } from "react";
-import { getUserRegistrations } from "../api/registrationsApi";
-
-const mockReservations = [
-  {
-    registration_id: 201,
-    status: "confirmed",
-    places: 2,
-    registered_at: "2026-05-15T10:30:00Z",
-    event: {
-      id: 88,
-      title: "Nuit Électro — Warehouse Paris",
-      date_start: "2026-07-12T23:00:00Z",
-      venue_city: "Paris",
-      image_url: "",
-    },
-  },
-  {
-    registration_id: 202,
-    status: "waiting_list",
-    places: 1,
-    registered_at: "2026-05-18T14:00:00Z",
-    event: {
-      id: 89,
-      title: "Rooftop Sunset Vibes",
-      date_start: "2026-06-22T19:00:00Z",
-      venue_city: "Paris",
-      image_url: "",
-    },
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { getUserRegistrations, cancelRegistration } from "../api/registrationsApi";
+import { useAuth } from "../context/AuthContext";
 
 function MyReservations() {
-  const [reservations, setReservations] = useState(mockReservations);
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
 
-  useEffect(() => {
-    async function fetchReservations() {
-      const userId = localStorage.getItem("eventry_user_id");
-
-      if (!userId) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await getUserRegistrations(userId, {
-          page: 1,
-          limit: 10,
-        });
-
-        setReservations(response.data || []);
-      } catch (err) {
-        setError(
-          err.message ||
-            "Impossible de récupérer les réservations pour le moment."
-        );
-      } finally {
-        setLoading(false);
-      }
+  const fetchReservations = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
     }
 
+    try {
+      setLoading(true);
+      const response = await getUserRegistrations(user.id, {
+        page: 1,
+        limit: 20,
+      });
+      setReservations(response.data || []);
+    } catch (err) {
+      setError(err.message || "Impossible de récupérer tes réservations.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchReservations();
-  }, []);
+  }, [user]);
+
+  const handleCancel = async (eventId) => {
+    if (!window.confirm("Veux-tu vraiment annuler cette réservation ?")) return;
+
+    try {
+      await cancelRegistration(eventId);
+      setActionMessage("Réservation annulée avec succès.");
+      // Rafraîchir la liste pour voir le statut 'annulee' (ou la disparition selon ton choix API)
+      fetchReservations();
+      setTimeout(() => setActionMessage(""), 3000);
+    } catch (err) {
+      alert("Erreur lors de l'annulation.");
+    }
+  };
+
+  const confirmedCount = reservations.filter(r => r.status === "confirmee").length;
+  const waitingCount = reservations.filter(r => r.status === "liste_attente").length;
 
   return (
     <main className="reservations-page">
@@ -81,17 +67,17 @@ function MyReservations() {
 
     <div className="reservations-stats">
       <div>
-        <strong>02</strong>
+        <strong>{reservations.length}</strong>
         <span>Réservations</span>
       </div>
 
       <div>
-        <strong>01</strong>
-        <span>Confirmée</span>
+        <strong>{confirmedCount}</strong>
+        <span>Confirmée(s)</span>
       </div>
 
       <div>
-        <strong>01</strong>
+        <strong>{waitingCount}</strong>
         <span>En attente</span>
       </div>
     </div>
@@ -107,8 +93,8 @@ function MyReservations() {
   </div>
 </section>
 
-      {loading && <p className="page-message">Chargement des réservations...</p>}
-
+      {loading && <p className="page-message">Chargement de tes réservations...</p>}
+      {!loading && reservations.length === 0 && !error && <p className="page-message">Tu n'as pas encore de réservations.</p>}
       {error && <p className="form-error">{error}</p>}
 
       <section className="reservations-grid">
@@ -119,14 +105,19 @@ function MyReservations() {
             <div className="reservation-content">
               <div className="reservation-top">
                 <span
-                  className={
-                    reservation.status === "confirmed"
-                      ? "status-badge confirmed"
-                      : "status-badge waiting"
-                  }
+                  className={`status-badge ${
+                    reservation.status === "confirmee"
+                      ? "confirmed"
+                      : reservation.status === "annulee"
+                      ? "cancelled"
+                      : "waiting"
+                  }`}
+                  style={reservation.status === "annulee" ? { borderColor: "#ff4f76", color: "#ff4f76", background: "rgba(198, 40, 74, 0.1)" } : {}}
                 >
-                  {reservation.status === "confirmed"
+                  {reservation.status === "confirmee"
                     ? "Confirmée"
+                    : reservation.status === "annulee"
+                    ? "Annulée"
                     : "Liste d’attente"}
                 </span>
 
@@ -135,11 +126,11 @@ function MyReservations() {
                 </span>
               </div>
 
-              <h2>{reservation.event.title}</h2>
+              <h2>{reservation.event.titre}</h2>
 
               <p>
-                {reservation.event.venue_city} •{" "}
-                {new Date(reservation.event.date_start).toLocaleDateString(
+                {reservation.event.venue.ville} •{" "}
+                {new Date(reservation.event.date_debut).toLocaleDateString(
                   "fr-FR"
                 )}
               </p>
@@ -152,8 +143,19 @@ function MyReservations() {
               </p>
 
               <div className="reservation-actions">
-                <button className="primary-btn">Voir l’événement</button>
-                <button className="secondary-btn">Annuler</button>
+                <button 
+                  className="primary-btn" 
+                  onClick={() => navigate(`/events/${reservation.event.id}`)}
+                >
+                  Voir l’événement
+                </button>
+                <button 
+                  className="secondary-btn" 
+                  onClick={() => handleCancel(reservation.event.id)}
+                  disabled={reservation.status === "annulee"}
+                >
+                  {reservation.status === "annulee" ? "Annulée" : "Annuler"}
+                </button>
               </div>
             </div>
           </article>

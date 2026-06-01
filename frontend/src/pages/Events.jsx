@@ -4,13 +4,13 @@ import { events as mockEvents } from "../data/mockEvents";
 import EventCard from "../components/EventCard";
 
 function Events() {
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState([]); // Initialise à vide au lieu des mocks
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [sort, setSort] = useState("date_asc");
   const [priceMax, setPriceMax] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   async function fetchEvents() {
@@ -20,7 +20,7 @@ function Events() {
 
       const params = {
         page: 1,
-        limit: 10,
+        limit: 20,
         sort,
       };
 
@@ -32,10 +32,12 @@ function Events() {
 
       if (Array.isArray(response?.data)) {
         setEvents(response.data);
+      } else {
+        setEvents([]);
       }
     } catch (err) {
       console.error(err);
-      setError("API indisponible : affichage des événements de démonstration.");
+      setError("Erreur de connexion à l'API. Affichage des données de secours.");
       setEvents(mockEvents);
     } finally {
       setLoading(false);

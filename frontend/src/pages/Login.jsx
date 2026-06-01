@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../api/authApi";
+import { loginUser, getCurrentUser } from "../api/authApi";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -30,15 +32,24 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await loginUser(formData);
+      // 1. Authentification pour obtenir le token
+      const authResponse = await loginUser(formData);
+      
+      // Stockage temporaire du token pour l'appel suivant (le client API le récupérera du localStorage dans AuthContext.login plus tard, mais ici on a besoin qu'il soit dispo pour getCurrentUser si on ne passe pas le token explicitement)
+      localStorage.setItem("eventry_token", authResponse.access_token);
 
-      localStorage.setItem("eventry_token", response.access_token);
-      localStorage.setItem("eventry_token_type", response.token_type);
+      // 2. Récupération immédiate du profil complet (pour le rôle)
+      const userData = await getCurrentUser();
+
+      // 3. Mise à jour de l'état global
+      login(authResponse.access_token, userData);
 
       setSuccess("Connexion réussie.");
       navigate("/events");
     } catch (err) {
       console.error(err);
+      // Nettoyage en cas d'échec
+      localStorage.removeItem("eventry_token");
       setError(
         err.message ||
           "Connexion impossible. Vérifie ton email et ton mot de passe."
