@@ -51,10 +51,10 @@ docker-compose up --build -d
 
 Pour faciliter la collaboration, plusieurs guides détaillés sont disponibles dans le projet :
 
-- 🐳 **[Guide Docker](./db/DOCKER_GUIDE.md)** : Comment gérer les conteneurs, accéder aux bases de données et se connecter via MongoDB Compass ou DBeaver.
-- 🛠️ **[Guide Git](./docs/spécification/git-guide.md)** : Comment travailler proprement sur les branches, nommer vos commits et faire des Pull Requests.
-- 🐘 **[Documentation PostgreSQL](./db/sql/README.md)** : Détails sur les procédures stockées, triggers et vues.
-- 🍃 **[Documentation MongoDB](./db/nosql/README.md)** : Détails sur les index géospatiaux et le polymorphisme des données.
+- 🐳 **[Guide Docker](./docker/DOCKER_GUIDE.md)** : Comment gérer les conteneurs, accéder aux bases de données et se connecter via MongoDB Compass ou DBeaver.
+- 🛠️ **[Guide Git](./docs/specification/git-guide.md)** : Comment travailler proprement sur les branches, nommer vos commits et faire des Pull Requests.
+- 🐘 **[Documentation PostgreSQL](./db/sql/readme.md)** : Détails sur les procédures stockées, triggers et vues.
+- 🍃 **[Documentation MongoDB](./db/nosql/readme.md)** : Détails sur les index géospatiaux et le polymorphisme des données.
 
 ---
 
