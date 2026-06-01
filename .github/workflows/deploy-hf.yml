@@ -23,6 +23,7 @@ jobs:
           cp -r backend deploy_dir/
           cp -r db deploy_dir/
           cp Dockerfile deploy_dir/
+          cp README.md deploy_dir/
           cp entrypoint.sh deploy_dir/
           cp supervisord.conf deploy_dir/
 
