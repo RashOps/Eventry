@@ -18,4 +18,4 @@ jobs:
       - name: Push to Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://RashOps:$HF_TOKEN@https://huggingface.co/spaces/RashOps/Eventry HEAD:main
+        run: git push --force https://RashOps:$HF_TOKEN@huggingface.co/spaces/RashOps/Eventry HEAD:main
