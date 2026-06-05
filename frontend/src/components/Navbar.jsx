@@ -18,7 +18,7 @@ function Navbar() {
 
       <nav>
         <Link to="/">Accueil</Link>
-        <Link to="/events">Événements</Link>
+        <Link to="/events">Évènements</Link>
         
         {isAuthenticated && (
           <Link to="/my-reservations">Mes réservations</Link>

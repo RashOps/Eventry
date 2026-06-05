@@ -2,7 +2,8 @@ name: Release Desktop Application
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*' # Triggers on tags like v1.0.0, v0.1.1, etc.
   workflow_dispatch:
 
 jobs:
@@ -14,6 +15,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necessary to generate changelog from history
 
       - name: Setup mise (Environment Manager)
         uses: jdx/mise-action@v2
@@ -33,15 +36,21 @@ jobs:
           cd frontend
           bun install
 
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Tauri Desktop Application (.exe)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: eventry-v__VERSION__
-          releaseName: "Eventry v__VERSION__"
-          releaseBody: "Release automatisée du client léger Eventry pour Windows."
+          tagName: ${{ github.ref_name }}
+          releaseName: "Eventry ${{ github.ref_name }}"
+          releaseBody: ${{ steps.github_release.outputs.changelog }}
           releaseDraft: true
           prerelease: false
           projectPath: "./frontend"
-          args: "" # Tauri v2 parameters if needed
+          args: ""

@@ -106,11 +106,11 @@ function CreateEvent() {
         <div className="create-event-header-content">
           <p className="badge">Espace organisateur</p>
 
-          <h1>Crée ton événement et fais-le découvrir à la communauté Eventry.</h1>
+          <h1>Crée ton évènement et fais-le découvrir à la communauté Eventry.</h1>
 
           <p>
             Renseigne les informations principales, les dates, le lieu et les
-            métadonnées afin que les participants puissent trouver ton événement
+            métadonnées afin que les participants puissent trouver ton évènement
             et réserver leur place facilement.
           </p>
 

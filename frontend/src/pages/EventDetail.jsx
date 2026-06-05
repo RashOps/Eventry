@@ -146,7 +146,7 @@ function EventDetail() {
   };
 
   if (loading && !event) return <main className="event-detail-hero"><p className="page-message">Chargement...</p></main>;
-  if (!event) return <main className="event-detail-hero"><p className="form-error">Événement introuvable.</p></main>;
+  if (!event) return <main className="event-detail-hero"><p className="form-error">Évènement introuvable.</p></main>;
 
   const isEventOver = new Date(event.date_end) < new Date();
   const canReview = isRegistered && isEventOver && !reviews.some(r => r.user.id === user?.id);

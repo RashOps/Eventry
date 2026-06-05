@@ -70,13 +70,13 @@ function EditEvent() {
     }
   }
 
-  if (loading) return <p className="page-message">Chargement de l'événement...</p>;
+  if (loading) return <p className="page-message">Chargement de l'évènement...</p>;
 
   return (
     <main className="auth-page">
       <section className="auth-card" style={{ maxWidth: '700px' }}>
         <p className="badge">Édition</p>
-        <h1>Modifier l'événement</h1>
+        <h1>Modifier l'évènement</h1>
         
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
