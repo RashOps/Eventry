@@ -23,6 +23,7 @@ function MyReservations() {
         page: 1,
         limit: 20,
       });
+      // La réponse de l'API est { data: [...], total: X }
       setReservations(response.data || []);
     } catch (err) {
       setError(err.message || "Impossible de récupérer tes réservations.");
@@ -58,10 +59,10 @@ function MyReservations() {
   <div className="reservations-header-content">
     <p className="badge">Espace participant</p>
 
-    <h1>Gère tes réservations et retrouve tous tes événements.</h1>
+    <h1>Gère tes réservations et retrouve tous tes évènements.</h1>
 
     <p>
-      Consulte les événements que tu as rejoints, vérifie ton statut
+      Consulte les évènements que tu as rejoints, vérifie ton statut
       d’inscription et accède rapidement aux détails de chaque réservation.
     </p>
 
@@ -85,10 +86,10 @@ function MyReservations() {
 
   <div className="reservations-header-card">
     <span>Suivi rapide</span>
-    <h2>Tout ton planning événementiel au même endroit</h2>
+    <h2>Tout ton planning évènementiel au même endroit</h2>
     <p>
       Eventry centralise tes places réservées, les statuts d’inscription et les
-      informations importantes liées à tes événements.
+      informations importantes liées à tes évènements.
     </p>
   </div>
 </section>

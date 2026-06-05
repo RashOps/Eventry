@@ -60,7 +60,7 @@ function Dashboard() {
         <div className="dashboard-header-content">
           <p className="badge">Espace {user?.pseudo}</p>
 
-          <h1>Pilote tes événements et suis leurs performances.</h1>
+          <h1>Pilote tes évènements et suis leurs performances.</h1>
 
           <p>
             Consulte le remplissage, le nombre d’inscrits et les performances de tes
@@ -70,7 +70,7 @@ function Dashboard() {
           <div className="dashboard-stats">
             <div>
               <strong>{totalEvents}</strong>
-              <span>Événements</span>
+              <span>Évènements</span>
             </div>
 
             <div>

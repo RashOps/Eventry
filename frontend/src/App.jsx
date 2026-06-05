@@ -39,6 +39,14 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/my-reservations" 
+            element={
+              <ProtectedRoute>
+                <MyReservations />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Routes Protégées - Organisateur uniquement */}
           <Route 
