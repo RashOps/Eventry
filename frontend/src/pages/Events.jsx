@@ -145,7 +145,7 @@ function Events() {
   <div className="events-header-content">
     <p className="badge">Catalogue Eventry</p>
 
-    <h1>Trouve l’événement qui correspond à ton ambiance.</h1>
+    <h1>Trouve l’évènement qui correspond à ton ambiance.</h1>
 
     <p>
       Explore les soirées, festivals, afterworks et sorties disponibles autour

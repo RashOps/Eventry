@@ -46,9 +46,9 @@ function Home() {
     <main>
       <section className="hero">
         <div className="hero-content">
-          <p className="badge">Plateforme événementielle</p>
+          <p className="badge">Plateforme évènementielle</p>
 
-          <h1>Crée, découvre et rejoins des événements près de chez toi.</h1>
+          <h1>Crée, découvre et rejoins des évènements près de chez toi.</h1>
 
           <p>
             Eventry permet aux utilisateurs de créer des soirées, fêtes ou
@@ -57,8 +57,8 @@ function Home() {
           </p>
 
           <div className="hero-actions">
-            <Link to="/events"><Button>Découvrir les événements</Button></Link>
-            <Link to="/create-event"><Button variant="secondary">Créer un événement</Button></Link>
+            <Link to="/events"><Button>Découvrir les évènements</Button></Link>
+            <Link to="/create-event"><Button variant="secondary">Créer un évènement</Button></Link>
           </div>
         </div>
 
@@ -101,17 +101,17 @@ function Home() {
       <section className="events-section">
         <div className="section-title">
           <h2>Événements populaires</h2>
-          <p>Découvre les événements réels synchronisés depuis le backend.</p>
+          <p>Découvre les évènements réels synchronisés depuis le backend.</p>
         </div>
 
         {loading ? (
-          <p className="page-message">Chargement des événements...</p>
+          <p className="page-message">Chargement des évènements...</p>
         ) : (
           <div className="events-grid">
             {events.map((event) => (
               <EventCard event={event} key={event.id} />
             ))}
-            {events.length === 0 && <p className="page-message">Aucun événement disponible pour le moment.</p>}
+            {events.length === 0 && <p className="page-message">Aucun évènement disponible pour le moment.</p>}
           </div>
         )}
       </section>
