@@ -14,8 +14,10 @@ RUN npm run build
 # --- STAGE 2: Runtime Stage (L'image finale) ---
 FROM nginx:stable-alpine
 
-# On récupère uniquement les fichiers statiques compilés
-# (Note: Le dossier 'dist' est le standard pour Vite)
+# Copier la configuration Nginx pour les SPA (Single Page Applications)
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copie uniquement les fichiers statiques compilés (dist est le standard pour Vite)
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
