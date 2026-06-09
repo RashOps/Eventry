@@ -19,7 +19,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def hash_password(password: str) -> str:
-    """Hache un mot de passe en utilisant bcrypt directement"""
+    """Hashes a plain-text password using bcrypt.
+
+    Args:
+        password: The plain-text password to hash.
+
+    Returns:
+        The bcrypt-hashed password string.
+    """
     # bcrypt attend des bytes
     pwd_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
@@ -27,7 +34,15 @@ def hash_password(password: str) -> str:
     return hashed.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Vérifie un mot de passe contre son hash bcrypt"""
+    """Verifies a plain-text password against a bcrypt hash.
+
+    Args:
+        plain_password: The plain-text password to verify.
+        hashed_password: The bcrypt hash to verify against.
+
+    Returns:
+        True if the password matches the hash, False otherwise.
+    """
     try:
         return bcrypt.checkpw(
             plain_password.encode('utf-8'), 
@@ -37,6 +52,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 def create_access_token(data: dict) -> str:
+    """Generates a JSON Web Token (JWT) access token.
+
+    Args:
+        data: The claims dictionary to encode in the token.
+
+    Returns:
+        The encoded JWT string.
+    """
     to_encode = data.copy()
     expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
@@ -50,6 +73,18 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     session: AsyncSession = Depends(get_async_sqldb)
 ) -> Utilisateur:
+    """Retrieves the currently authenticated user from the JWT token.
+
+    Args:
+        token: The raw JWT bearer token.
+        session: The active database session.
+
+    Returns:
+        The authenticated Utilisateur instance.
+
+    Raises:
+        HTTPException: If the token is invalid or the user does not exist.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

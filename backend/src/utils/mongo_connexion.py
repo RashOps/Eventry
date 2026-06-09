@@ -5,9 +5,12 @@ from config import settings
 from src.models.nosql.events import EventsCatalog
 from src.models.nosql.reviews import Avis
 
-async def init_db_nosql():
-    """
-    Initialise la connexion MongoDB asynchrone et enregistre les modèles Beanie.
+async def init_db_nosql() -> None:
+    """Initializes the asynchronous MongoDB connection and registers Beanie documents.
+
+    Registers:
+        EventsCatalog: The MongoDB event catalog collection.
+        Avis: The reviews and community feedback collection.
     """
     # 1. Création du client Motor
     client = AsyncIOMotorClient(settings.mongo_uri)
@@ -23,6 +26,10 @@ async def init_db_nosql():
     
     print(f"✅ MongoDB Async (Motor + Beanie) initialisé sur : {settings.mongo_db_name}")
 
-def get_motor_client():
-    """Retourne le client motor brut si besoin de requêtes bas niveau"""
+def get_motor_client() -> AsyncIOMotorClient:
+    """Returns the raw asynchronous Motor client for low-level MongoDB queries.
+
+    Returns:
+        AsyncIOMotorClient: The raw Motor connection client.
+    """
     return AsyncIOMotorClient(settings.mongo_uri)
