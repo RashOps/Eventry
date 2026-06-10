@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createEvent } from "../api/eventsApi";
 import { useAuth } from "../context/AuthContext";
+import { useRefData } from "../context/RefContext";
 
 function CreateEvent() {
   const { isOrganizer } = useAuth();
   const navigate = useNavigate();
+  const { venues, categories } = useRefData();
   
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "boite_de_nuit",
+    category: "",
     date_start: "",
     date_end: "",
     price: "",
@@ -31,6 +33,27 @@ function CreateEvent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (venues && venues.length > 0 && !formData.venue_id) {
+      setFormData((prev) => ({
+        ...prev,
+        venue_id: venues[0].id,
+        city: venues[0].ville,
+        longitude: venues[0].longitude,
+        latitude: venues[0].latitude,
+      }));
+    }
+  }, [venues, formData.venue_id]);
+
+  useEffect(() => {
+    if (categories && categories.length > 0 && !formData.category) {
+      setFormData((prev) => ({
+        ...prev,
+        category: categories[0].nom,
+      }));
+    }
+  }, [categories, formData.category]);
+
   function handleChange(event) {
     const { name, value, type, checked } = event.target;
 
@@ -38,6 +61,20 @@ function CreateEvent() {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+  }
+
+  function handleVenueChange(event) {
+    const venueId = Number(event.target.value);
+    const selectedVenue = venues.find((v) => v.id === venueId);
+    if (selectedVenue) {
+      setFormData((prev) => ({
+        ...prev,
+        venue_id: venueId,
+        city: selectedVenue.ville,
+        longitude: selectedVenue.longitude,
+        latitude: selectedVenue.latitude,
+      }));
+    }
   }
 
   async function handleSubmit(event) {
@@ -52,10 +89,13 @@ function CreateEvent() {
     setError("");
     setLoading(true);
 
+    const selectedCategory = categories.find((c) => c.nom === formData.category);
+    const id_categorie = selectedCategory ? selectedCategory.id : 1;
+
     const payload = {
       titre: formData.title, // Backend attend 'titre'
       description: formData.description,
-      id_categorie: Number(formData.category === "boite_de_nuit" ? 2 : 1), // Mapping temporaire pour le seed, idéalement dynamique via API categories
+      id_categorie: id_categorie,
       date_debut: new Date(formData.date_start).toISOString(),
       date_fin: new Date(formData.date_end).toISOString(),
       prix: Number(formData.price),
@@ -179,12 +219,14 @@ function CreateEvent() {
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
+                  required
                 >
-                  <option value="boite_de_nuit">Boîte de nuit</option>
-                  <option value="festival">Festival</option>
-                  <option value="afterwork">Afterwork</option>
-                  <option value="expo">Expo</option>
-                  <option value="sortie">Sortie</option>
+                  <option value="" disabled>Choisir une catégorie...</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.nom}>
+                      {cat.nom.replace("_", " ").toUpperCase()}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -260,15 +302,20 @@ function CreateEvent() {
 
             <div className="form-grid">
               <div className="form-group">
-                <label>ID du lieu</label>
-                <input
-                  type="number"
+                <label>Lieu</label>
+                <select
                   name="venue_id"
-                  placeholder="8"
                   value={formData.venue_id}
-                  onChange={handleChange}
+                  onChange={handleVenueChange}
                   required
-                />
+                >
+                  <option value="" disabled>Choisir un lieu...</option>
+                  {venues.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nom} ({v.ville} - {v.adresse})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -278,7 +325,8 @@ function CreateEvent() {
                   name="city"
                   placeholder="Paris"
                   value={formData.city}
-                  onChange={handleChange}
+                  readOnly
+                  disabled
                 />
               </div>
 
@@ -290,8 +338,8 @@ function CreateEvent() {
                   name="longitude"
                   placeholder="2.3522"
                   value={formData.longitude}
-                  onChange={handleChange}
-                  required
+                  readOnly
+                  disabled
                 />
               </div>
 
@@ -303,8 +351,8 @@ function CreateEvent() {
                   name="latitude"
                   placeholder="48.8566"
                   value={formData.latitude}
-                  onChange={handleChange}
-                  required
+                  readOnly
+                  disabled
                 />
               </div>
             </div>
