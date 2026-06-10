@@ -48,10 +48,26 @@ L'objectif était de résoudre deux dysfonctionnements majeurs lors de la créat
 
 ---
 
+## 🔍 Audit Global & Résolution des Coquilles
+Lors de l'audit global de la codebase, plusieurs imperfections critiques ont été identifiées et résolues :
+
+1. **Harmonisation des filtres de recherche (Frontend)** :
+   - Les formulaires de recherche de [Home.jsx](../../frontend/src/pages/Home.jsx) et de la page catalogue [Events.jsx](../../frontend/src/pages/Events.jsx) utilisaient des listes statiques de catégories et de villes.
+   - **Résolution d'un bug silencieux** : Le filtre statique "Expo" envoyait la valeur `expo`, alors que la catégorie SQL de référence est nommée `exposition`. Le filtre ne retournait aucun résultat. L'utilisation des données dynamiques du cache résout cette anomalie.
+   - **Résolution d'un manque fonctionnel** : La ville de Bordeaux (venue `I.BOAT` du seed de BDD) était absente des filtres, rendant ses événements invisibles.
+   - **Solution** : Branchement de ces deux pages sur le context global [RefContext.jsx](../../frontend/src/context/RefContext.jsx) pour récupérer dynamiquement les catégories de PostgreSQL et extraire dynamiquement les villes uniques enregistrées :
+     `const cities = [...new Set(venues.map((v) => v.ville))].sort();`
+
+2. **Sécurisation de la modération des avis (Backend)** :
+   - Dans [reviews.py](../../backend/src/routes/reviews.py#L190-L192), lors de la réponse d'un organisateur à un avis, le code accédait aux attributs de l'événement lié sans vérifier son existence. Cela présentait un risque de plantage `AttributeError` (NoneType) si l'événement avait été supprimé.
+   - **Solution** : Ajout d'une condition explicite renvoyant un code d'erreur `404 Not Found`.
+
+---
+
 ## ✅ État Final
-- **Robustesse** : 0% de risque de violation de clé étrangère lors de la création grâce au dropdown et aux vérifications backend.
+- **Robustesse** : 0% de risque de violation de clé étrangère lors de la création grâce au dropdown et aux vérifications backend, et protection contre les exceptions `AttributeError` sur les avis.
 - **Performances** : Réduction du nombre d'appels API lors de la navigation grâce au caching dans le React Context.
-- **Expérience Utilisateur (UX)** : Remplissage semi-automatique des données géospatiales du lieu sélectionné.
+- **Expérience Utilisateur (UX)** : Remplissage automatique des coordonnées géospatiales du lieu, et filtres de recherche (catégories et villes) 100% dynamiques et synchronisés avec l'état réel des bases de données.
 
 ---
 
