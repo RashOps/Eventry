@@ -124,6 +124,21 @@ async def create_event(
     if not organisateur:
         raise HTTPException(status_code=400, detail="User is registered as organizer but profile is missing")
 
+    # 1.5 Vérification préemptive du Lieu et de la Catégorie
+    lieu = await session.get(Lieu, event_data.id_lieu)
+    if not lieu:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Lieu introuvable (ID: {event_data.id_lieu})"
+        )
+
+    categorie = await session.get(Categorie, event_data.id_categorie)
+    if not categorie:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Catégorie introuvable (ID: {event_data.id_categorie})"
+        )
+
     # 2. Insertion SQL - CONVERSION DES DATETIMES AWARE EN NAIVE
     # Les datetimes provenant du frontend via JSON (ISO format avec Z) sont AWARE (timezone-aware)
     # PostgreSQL TIMESTAMP WITHOUT TIME ZONE n'accepte que des NAIVE datetimes (sans timezone)
