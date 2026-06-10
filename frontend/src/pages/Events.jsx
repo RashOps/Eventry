@@ -3,9 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { getEvents, getNearbyEvents, searchEvents } from "../api/eventsApi";
 import { events as mockEvents } from "../data/mockEvents";
 import EventCard from "../components/EventCard";
+import { useRefData } from "../context/RefContext";
 
 function Events() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { venues, categories } = useRefData();
+  const cities = [...new Set(venues.map((v) => v.ville))].sort();
   
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState(searchParams.get("q") || "");
