@@ -61,6 +61,15 @@ class VenueSummary(BaseModel):
     ville: str
     adresse: str
 
+class CategoryOut(BaseModel):
+    id: int
+    nom: str
+    description: Optional[str] = None
+
+class VenueDetail(VenueSummary):
+    latitude: Decimal
+    longitude: Decimal
+
 class OrganizerSummary(BaseModel):
     id: int
     nom: str

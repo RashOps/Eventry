@@ -14,7 +14,7 @@ from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 
 from config import settings
-from src.routes import auth, users, events, registration, reviews, stats
+from src.routes import auth, users, events, registration, reviews, stats, venues, categories
 from src.utils.mongo_connexion import init_db_nosql
 
 @asynccontextmanager
@@ -60,3 +60,5 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(registration.router, prefix="/api/v1")
 app.include_router(reviews.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
+app.include_router(venues.router, prefix="/api/v1")
+app.include_router(categories.router, prefix="/api/v1")
