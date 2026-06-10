@@ -3,9 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { getEvents, getNearbyEvents, searchEvents } from "../api/eventsApi";
 import { events as mockEvents } from "../data/mockEvents";
 import EventCard from "../components/EventCard";
+import { useRefData } from "../context/RefContext";
 
 function Events() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { venues, categories } = useRefData();
+  const cities = [...new Set(venues.map((v) => v.ville))].sort();
   
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState(searchParams.get("q") || "");
@@ -187,18 +190,20 @@ function Events() {
 
         <select value={category} onChange={(event) => setCategory(event.target.value)}>
           <option value="">Toutes les catégories</option>
-          <option value="boite_de_nuit">Boîte de nuit</option>
-          <option value="afterwork">Afterwork</option>
-          <option value="festival">Festival</option>
-          <option value="expo">Expo</option>
-          <option value="sortie">Sortie</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.nom}>
+              {cat.nom.replace("_", " ").toUpperCase()}
+            </option>
+          ))}
         </select>
 
         <select value={city} onChange={(event) => setCity(event.target.value)}>
           <option value="">Toutes les villes</option>
-          <option value="Paris">Paris</option>
-          <option value="Lyon">Lyon</option>
-          <option value="Marseille">Marseille</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
 
         <input

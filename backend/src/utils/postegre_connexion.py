@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import text
 from config import settings
 import asyncio
+from typing import AsyncGenerator
 
 # 1. Modification du protocole : de 'postgresql://' à 'postgresql+asyncpg://'
 DATABASE_URL = (
@@ -26,7 +27,15 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 # Context Manager Asynchrone pour un usage hors FastAPI (ex: scripts, cron)
-async def get_async_sqldb():
+async def get_async_sqldb() -> AsyncGenerator[AsyncSession, None]:
+    """Provides an asynchronous SQLAlchemy session with automatic transaction management.
+
+    Yields:
+        AsyncSession: The active database session.
+
+    Raises:
+        Exception: If the transaction fails, executing a rollback before propagating.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

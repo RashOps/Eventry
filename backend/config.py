@@ -85,4 +85,16 @@ class Settings(BaseSettings):
         alias="JWT_SECRET_KEY"
     )
 
+    def __init__(self, **values):
+        super().__init__(**values)
+        is_docker = os.path.exists("/.dockerenv") or os.environ.get("AM_I_IN_A_DOCKER_CONTAINER") == "true"
+        if not is_docker:
+            if "@db-nosql" in self.mongo_uri:
+                self.mongo_uri = self.mongo_uri.replace("db-nosql", "localhost")
+            elif self.mongo_uri == "mongodb://db-nosql:27017/":
+                self.mongo_uri = "mongodb://localhost:27017/"
+            
+            if self.sql_host == "db-sql":
+                self.sql_host = "localhost"
+
 settings = Settings()

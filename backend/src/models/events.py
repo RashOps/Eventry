@@ -62,7 +62,8 @@ class EvenementBase(SQLModel):
 class Evenement(EvenementBase, table=True):
     __tablename__ = "evenements"
     id: Optional[int] = Field(default=None, primary_key=True)
-    date_creation: datetime = Field(default_factory=datetime.now)
+    # Créer une datetime NAIVE (sans timezone) pour PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+    date_creation: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     
     id_lieu: int = Field(foreign_key="lieux.id")
     id_organisateur: int = Field(foreign_key="organisateurs.id")

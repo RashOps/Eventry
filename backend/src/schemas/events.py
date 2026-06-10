@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Any, Dict
 from datetime import datetime
 from decimal import Decimal
@@ -20,6 +20,14 @@ class EventBase(BaseModel):
     id_lieu: int
     id_categorie: int
     image_url: Optional[str] = None
+    
+    @field_validator('date_debut', 'date_fin', mode='before')
+    @classmethod
+    def normalize_datetime(cls, v):
+        """Convertir les datetimes AWARE (avec timezone) en NAIVE pour PostgreSQL TIMESTAMP WITHOUT TIME ZONE"""
+        if isinstance(v, datetime) and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
 
 class EventCreate(EventBase):
     tags: List[str] = []
@@ -36,6 +44,14 @@ class EventUpdate(BaseModel):
     capacite_max: Optional[int] = None
     statut: Optional[StatutEventEnum] = None
     metadata: Optional[Dict[str, Any]] = None
+    
+    @field_validator('date_debut', 'date_fin', mode='before')
+    @classmethod
+    def normalize_datetime(cls, v):
+        """Convertir les datetimes AWARE en NAIVE pour PostgreSQL"""
+        if isinstance(v, datetime) and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
 
 # --- Modèles de réponse (SQL + MongoDB) ---
 
@@ -44,6 +60,15 @@ class VenueSummary(BaseModel):
     nom: str
     ville: str
     adresse: str
+
+class CategoryOut(BaseModel):
+    id: int
+    nom: str
+    description: Optional[str] = None
+
+class VenueDetail(VenueSummary):
+    latitude: Decimal
+    longitude: Decimal
 
 class OrganizerSummary(BaseModel):
     id: int
