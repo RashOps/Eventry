@@ -190,6 +190,9 @@ async def reply_to_review(
     res = await session.execute(stmt)
     event = res.scalar_one_or_none()
 
+    if not event:
+        raise HTTPException(status_code=404, detail="Associated event not found")
+
     stmt_org = select(Organisateur).where(Organisateur.id_utilisateur == current_user.id)
     res_org = await session.execute(stmt_org)
     organisateur = res_org.scalar_one_or_none()
