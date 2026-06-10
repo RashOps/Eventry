@@ -3,7 +3,7 @@ import { apiRequest } from "./client";
 export function getEvents(params = {}) {
   const query = new URLSearchParams(params).toString();
 
-  return apiRequest(`/events${query ? `?${query}` : ""}`);
+  return apiRequest(`/events/${query ? `?${query}` : ""}`);
 }
 
 export function getNearbyEvents({ lat, lng, radius = 10000, limit = 20 }) {
@@ -21,7 +21,7 @@ export function getEventById(id) {
 }
 
 export function createEvent(payload) {
-  return apiRequest("/events", {
+  return apiRequest("/events/", {
     method: "POST",
     body: JSON.stringify(payload),
   });

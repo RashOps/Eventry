@@ -124,12 +124,32 @@ async def create_event(
     if not organisateur:
         raise HTTPException(status_code=400, detail="User is registered as organizer but profile is missing")
 
-    # 2. Insertion SQL
+    # 1.5 Vérification préemptive du Lieu et de la Catégorie
+    lieu = await session.get(Lieu, event_data.id_lieu)
+    if not lieu:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Lieu introuvable (ID: {event_data.id_lieu})"
+        )
+
+    categorie = await session.get(Categorie, event_data.id_categorie)
+    if not categorie:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Catégorie introuvable (ID: {event_data.id_categorie})"
+        )
+
+    # 2. Insertion SQL - CONVERSION DES DATETIMES AWARE EN NAIVE
+    # Les datetimes provenant du frontend via JSON (ISO format avec Z) sont AWARE (timezone-aware)
+    # PostgreSQL TIMESTAMP WITHOUT TIME ZONE n'accepte que des NAIVE datetimes (sans timezone)
+    date_debut = event_data.date_debut.replace(tzinfo=None) if event_data.date_debut.tzinfo else event_data.date_debut
+    date_fin = event_data.date_fin.replace(tzinfo=None) if event_data.date_fin.tzinfo else event_data.date_fin
+    
     new_event = Evenement(
         titre=event_data.titre,
         description=event_data.description,
-        date_debut=event_data.date_debut,
-        date_fin=event_data.date_fin,
+        date_debut=date_debut,
+        date_fin=date_fin,
         prix=event_data.prix,
         capacite_max=event_data.capacite_max,
         image_url=event_data.image_url,
@@ -204,7 +224,8 @@ async def search_nearby(
     # 2. SQL : Récupérer les détails structurels
     stmt = select(Evenement).options(
         selectinload(Evenement.lieu),
-        selectinload(Evenement.tags)
+        selectinload(Evenement.tags),
+        selectinload(Evenement.categorie)
     ).where(Evenement.id.in_(event_ids))
     
     result = await session.execute(stmt)
@@ -224,12 +245,14 @@ async def search_nearby(
         EventSummary(
             id=e.id,
             titre=e.titre,
+            description=e.description,
             date_debut=e.date_debut,
             prix=e.prix,
             capacite_max=e.capacite_max,
             image_url=e.image_url,
             statut=e.statut,
             venue=VenueSummary(id=e.lieu.id, nom=e.lieu.nom, ville=e.lieu.ville, adresse=e.lieu.adresse),
+            categorie_name=e.categorie.nom,
             tags=[t.libelle for t in e.tags],
             average_rating=ratings_map.get(e.id, 0.0)
         ) for e in sorted_events
@@ -254,7 +277,8 @@ async def search_events(
     # 2. SQL : Récupérer les détails
     stmt = select(Evenement).options(
         selectinload(Evenement.lieu),
-        selectinload(Evenement.tags)
+        selectinload(Evenement.tags),
+        selectinload(Evenement.categorie)
     ).where(Evenement.id.in_(event_ids))
     
     result = await session.execute(stmt)
@@ -273,12 +297,14 @@ async def search_events(
         EventSummary(
             id=id_map[eid].id,
             titre=id_map[eid].titre,
+            description=id_map[eid].description,
             date_debut=id_map[eid].date_debut,
             prix=id_map[eid].prix,
             capacite_max=id_map[eid].capacite_max,
             image_url=id_map[eid].image_url,
             statut=id_map[eid].statut,
             venue=VenueSummary(id=id_map[eid].lieu.id, nom=id_map[eid].lieu.nom, ville=id_map[eid].lieu.ville, adresse=id_map[eid].lieu.adresse),
+            categorie_name=id_map[eid].categorie.nom,
             tags=[t.libelle for t in id_map[eid].tags],
             average_rating=ratings_map.get(eid, 0.0)
         ) for eid in event_ids if eid in id_map
@@ -348,9 +374,11 @@ async def update_event(
     if not organisateur or event.id_organisateur != organisateur.id:
         raise HTTPException(status_code=403, detail="Not authorized to modify this event")
 
-    # 2. Mise à jour SQL
+    # 2. Mise à jour SQL - Conversion des datetimes AWARE en NAIVE
     update_dict = update_data.model_dump(exclude_unset=True, exclude={"metadata"})
     for key, value in update_dict.items():
+        if key in ['date_debut', 'date_fin'] and value is not None and hasattr(value, 'tzinfo') and value.tzinfo:
+            value = value.replace(tzinfo=None)
         setattr(event, key, value)
     
     # 3. Mise à jour MongoDB (Beanie)

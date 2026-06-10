@@ -3,16 +3,18 @@ import { getEvents } from "../api/eventsApi";
 import EventCard from "../components/EventCard";
 import Button from "../components/Button";
 import { Link, useNavigate } from "react-router-dom";
+import { useRefData } from "../context/RefContext";
 
 function Home() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  // États pour la recherche rapide
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategory, setSearchCategory] = useState("");
   const [searchCity, setSearchCity] = useState("");
+  const { venues, categories } = useRefData();
+  const navigate = useNavigate();
+
+  const cities = [...new Set(venues.map((v) => v.ville))].sort();
 
   useEffect(() => {
     async function fetchPopularEvents() {
@@ -81,17 +83,20 @@ function Home() {
 
           <select value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)}>
             <option value="">Catégorie</option>
-            <option value="boite_de_nuit">Boîte de nuit</option>
-            <option value="afterwork">Afterwork</option>
-            <option value="festival">Festival</option>
-            <option value="exposition">Exposition</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.nom}>
+                {cat.nom.replace("_", " ").toUpperCase()}
+              </option>
+            ))}
           </select>
 
           <select value={searchCity} onChange={(e) => setSearchCity(e.target.value)}>
             <option value="">Ville</option>
-            <option value="Paris">Paris</option>
-            <option value="Lyon">Lyon</option>
-            <option value="Marseille">Marseille</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
 
           <button type="submit" className="primary-btn">Rechercher</button>

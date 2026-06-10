@@ -25,7 +25,10 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     pseudo: Optional[str] = None
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
+    role: Optional[UserRole] = None
+    nom_organisation: Optional[str] = Field(None, min_length=2, max_length=255)
+    description_organisation: Optional[str] = None
 
 class UserOut(UserBase):
     id: int

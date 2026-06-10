@@ -2,11 +2,13 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from typing import List
+from sqlalchemy import text
 
 from src.utils.postegre_connexion import get_async_sqldb
 from src.utils.security_jwt import get_current_user
 from src.models.users import Utilisateur
-from src.schemas.users import UserOut, UserUpdate
+from src.models.base import RoleEnum
+from src.schemas.users import UserOut, UserUpdate, UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -44,9 +46,47 @@ async def modify_user_infos(
 
     # Mise à jour sélective
     user_data = update_data.model_dump(exclude_unset=True)
+    
+    # Promotion organisateur si demandée et non déjà effective
+    if "role" in user_data:
+        if user_data["role"] == UserRole.ORGANISATEUR:
+            if db_user.role != RoleEnum.organisateur:
+                nom_org = user_data.get("nom_organisation")
+                if not nom_org:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Organization name is required to become an organizer"
+                    )
+                desc_org = user_data.get("description_organisation")
+                try:
+                    await session.execute(
+                        text("CALL proc_promouvoir_organisateur(:u_id, :org_name, :desc)"),
+                        {
+                            "u_id": db_user.id,
+                            "org_name": nom_org,
+                            "desc": desc_org
+                        }
+                    )
+                    await session.commit()
+                    await session.refresh(db_user)
+                except Exception as e:
+                    await session.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to promote user to organizer: {str(e)}"
+                    )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Changing role to something other than organizer is not supported"
+            )
+            
+    # Mise à jour des autres champs (pseudo, avatar_url)
     for key, value in user_data.items():
-        if key == "avatar_url" and value:
-            setattr(db_user, key, str(value))
+        if key in ["role", "nom_organisation", "description_organisation"]:
+            continue  # Gérés par la procédure stockée ci-dessus
+        if key == "avatar_url":
+            setattr(db_user, key, str(value) if value else None)
         else:
             setattr(db_user, key, value)
     
