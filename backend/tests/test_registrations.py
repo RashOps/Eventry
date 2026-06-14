@@ -124,3 +124,23 @@ async def test_get_my_registrations(client: AsyncClient):
     data = response.json()
     assert len(data["data"]) == 1
     assert data["data"][0]["event"]["id"] == 2
+
+@pytest.mark.asyncio
+async def test_re_register_after_cancellation(client: AsyncClient):
+    """Vérifie qu'un utilisateur peut se réinscrire après avoir annulé son inscription"""
+    token, _ = await create_fresh_user(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Première inscription
+    res1 = await client.post("/api/v1/events/2/register", json={"places_reservees": 1}, headers=headers)
+    assert res1.status_code == 201
+    assert res1.json()["statut"] == "confirmee"
+
+    # 2. Annulation
+    res2 = await client.delete("/api/v1/events/2/register", headers=headers)
+    assert res2.status_code == 204
+
+    # 3. Réinscription (doit réussir car la précédente a été annulée)
+    res3 = await client.post("/api/v1/events/2/register", json={"places_reservees": 1}, headers=headers)
+    assert res3.status_code == 201
+    assert res3.json()["statut"] == "confirmee"
