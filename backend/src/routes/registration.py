@@ -41,9 +41,14 @@ async def register_to_event(
         Inscription.id_utilisateur == current_user.id,
         Inscription.id_evenement == event_id
     )
-    existing = await session.execute(stmt)
-    if existing.first():
-        raise HTTPException(status_code=409, detail="Already registered to this event")
+    res = await session.execute(stmt)
+    existing = res.scalar_one_or_none()
+    if existing:
+        if existing.statut != "annulee":
+            raise HTTPException(status_code=409, detail="Already registered to this event")
+        else:
+            await session.delete(existing)
+            await session.commit()
 
     # 3. Appel à la procédure stockée (Logique métier SQL)
     # On passe NULL pour le paramètre OUT r_statut

@@ -56,6 +56,19 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  position: relative;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 24px;
+}
+
+.menu-toggle {
+  display: none;
 }
 
 .logo {
@@ -334,14 +347,76 @@ select {
 /* RESPONSIVE */
 
 @media (max-width: 980px) {
-  .navbar {
+  .menu-toggle {
+    display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+    padding: 0;
   }
 
-  .navbar nav {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 18px;
+  .hamburger-line {
+    width: 100%;
+    height: 2px;
+    background-color: var(--text);
+    transition: all 0.3s ease;
+  }
+
+  .menu-toggle.open .hamburger-line:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+  
+  .menu-toggle.open .hamburger-line:nth-child(2) {
+    opacity: 0;
+  }
+
+  .menu-toggle.open .hamburger-line:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+
+  .nav-container {
+    display: none;
+  }
+
+  .nav-container.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #130b1f;
+    padding: 30px 22px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid var(--border);
+    z-index: 999;
+    gap: 24px;
+    align-items: center;
+    animation: slideDown 0.25s ease-out forwards;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .nav-container.open nav {
+    flex-direction: column;
+    width: 100%;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .nav-container.open .nav-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 15px;
+    align-items: center;
   }
 
   .hero {
