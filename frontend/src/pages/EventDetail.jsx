@@ -16,6 +16,7 @@ function EventDetail() {
   const [event, setEvent] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isOnWaitlist, setIsOnWaitlist] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -50,8 +51,9 @@ function EventDetail() {
 
       if (isAuthenticated && user?.id) {
         const userRegs = await getUserRegistrations(user.id);
-        const already = userRegs.data?.some(reg => String(reg.event.id) === String(id) && reg.status === "confirmee");
-        setIsRegistered(already);
+        const reg = userRegs.data?.find(r => String(r.event.id) === String(id));
+        setIsRegistered(reg?.status === "confirmee");
+        setIsOnWaitlist(reg?.status === "liste_attente");
       }
     } catch (err) {
       console.error(err);
@@ -87,13 +89,14 @@ function EventDetail() {
       const response = await registerToEvent(id, 1);
       if (response?.statut === "liste_attente") {
         setRegisterMessage("Événement complet : ajouté à la liste d'attente.");
+        setIsOnWaitlist(true);
       } else {
         setRegisterMessage("Réservation confirmée !");
         setIsRegistered(true);
       }
       fetchData();
     } catch (err) {
-      setRegisterError(err.message || "Erreur de réservation.");
+      setRegisterError(err.detail || err.message || "Erreur de réservation.");
     } finally {
       setRegisterLoading(false);
     }
@@ -179,9 +182,12 @@ function EventDetail() {
               <button 
                 className="primary-btn" 
                 onClick={handleRegister} 
-                disabled={isRegistered || registerLoading}
+                disabled={isRegistered || isOnWaitlist || registerLoading}
               >
-                {registerLoading ? "Chargement..." : isRegistered ? "Déjà inscrit" : "Réserver ma place"}
+                {registerLoading ? "Chargement..." : 
+                 isRegistered ? "Déjà inscrit" : 
+                 isOnWaitlist ? "En liste d'attente" : 
+                 "Réserver ma place"}
               </button>
             ) : (
               canReview && !showReviewForm && (
