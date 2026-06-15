@@ -69,7 +69,11 @@ function EventDetail() {
     try {
       setReviewsLoading(true);
       const response = await getEventReviews(id);
-      setReviews(Array.isArray(response) ? response : []);
+      const mapped = (Array.isArray(response) ? response : []).map(r => ({
+        ...r,
+        id: r.id || r._id
+      }));
+      setReviews(mapped);
     } catch (err) {
       console.error(err);
     } finally {
@@ -151,7 +155,7 @@ function EventDetail() {
   if (loading && !event) return <main className="event-detail-hero"><p className="page-message">Chargement...</p></main>;
   if (!event) return <main className="event-detail-hero"><p className="form-error">Évènement introuvable.</p></main>;
 
-  const isEventOver = new Date(event.date_end) < new Date();
+  const isEventOver = new Date(event.date_fin) < new Date();
   const canReview = isRegistered && isEventOver && !reviews.some(r => r.user.id === user?.id);
 
   return (
